@@ -1,0 +1,61 @@
+System element,Function,Potential failure,C,Potential effect(s) of failure,S,C,C,Potential cause(s) of failure,O,Current preventive action,Current detection action,D,RPN,Recommended action,R/D,Action taken,S,O,D,RPN
+Welding Preperation,Preparing for welding.,Spot Missing,,"[Spot Welding]
+Incorrect welding",7,,,"[Robot]
+Improper robot training.",3,Proper robot teaching,Teaching Validation,4,84,,,,,,,
+Welding Preperation,Preparing for welding.,Spot  Position not as  per  drawing,,"[Spot Welding]
+Improper parts assembly",5,,,"[Robot]
+Improper robot training.",3,Proper robot teaching,Teaching Validation,4,60,,,,,,,
+Weld Quality Control,Ensuring welding and surface quality,Spot burr,,"[Spot Welding]
+Part breakage",9,,,"[Work Piece]
+Gap between parts due to faulty parts",3,Process qualification,Fixture verification on CMM,2,54,,,,,,,
+Weld Quality Control,Ensuring welding and surface quality,Spot burr,,"[Spot Welding]
+Improper parts assembly",5,,,"[Work Piece]
+Gap between parts due to faulty parts",3,Process qualification,Fixture verification on CMM,2,54,,,,,,,
+Weld Quality Control,Ensuring welding and surface quality,Spot burr,,"[Spot Welding]
+Improper parts assembly",5,,,"[Welding Equipment]
+Tip dressing in not working properly",3,Tip dressing after 100 spots,Carbon  testing,3,81,,,,,,,
+Weld Quality Control,Ensuring welding and surface quality,Spot not round,,"[Spot Welding]
+Improper parts assembly",5,,,"[Welding Equipment]
+Tip dressing in not working properly",3,Tip dressing after 100 spots,Carbon  testing,3,45,,,,,,,
+Weld Quality Control,Ensuring welding and surface quality,Spot not round,,"[Spot Welding]
+Improper parts assembly",5,,,"[Welding Equipment]
+Incorrect Tip Alignment",4,Process qualification,Test after 100 spot,4,80,,,,,,,
+Weld Quality Control,Ensuring welding and surface quality,Weak spot,,"[Spot Welding]
+Part breakage",9,,,"[Welding Equipment]
+Tip dressing in not working properly",3,Tip dressing after 100 spots,Carbon  testing,3,81,,,,,,,
+Weld Quality Control,Ensuring welding and surface quality,Weak spot,,"[Spot Welding]
+Part breakage",9,,,"[Work Piece]
+Excess gap between  two matting components",3,Process qualification,Fixture verification on CMM,3,81,,,,,,,
+Welding Operation,Performing spot welding operation,Weak spot,,"[Spot Welding]
+Part breakage",9,,,"[Robot]
+Less Current",4,Process qualification,setting    of online parameter display,3,108,,,,,,,
+Welding Operation,Performing spot welding operation,Weak spot,,"[Spot Welding]
+Part breakage",9,,,"[Robot]
+Less force",3,Process qualification,setting    of online parameter display,2,54,,,,,,,
+Welding Operation,Performing spot welding operation,Deep spot,,"[Spot Welding]
+Poor Appearance",4,,,"[Robot]
+High Force",3,Process qualification,setting    of online parameter display,2,24,,,,,,,
+Welding Operation,Performing spot welding operation,Deep spot,,"[Spot Welding]
+Poor Appearance",4,,,"[Robot]
+More weld time",6,Process qualification,setting    of online parameter display,4,96,,,,,,,
+Welding Operation,Performing spot welding operation,Deep spot,,"[Spot Welding]
+Poor Appearance",4,,,"[Welding Equipment]
+Tip Alignment not ok",5,Process qualification,Carbon  testing,4,80,,,,,,,
+Welding Operation,Performing spot welding operation,Spot burn,,"[Spot Welding]
+Poor Strength",7,,,"[Robot]
+High current",4,Process qualification,setting    of online parameter display,3,84,,,,,,,
+Welding Operation,Performing spot welding operation,Spot burn,,"[Spot Welding]
+Poor Strength",7,,,"[Robot]
+More weld time",6,Process qualification,setting    of online parameter display,4,168,,,,,,,
+Welding Operation,Performing spot welding operation,Spot burn,,"[Spot Welding]
+Poor Strength",7,,,"[Robot]
+High Force",3,Process qualification,setting    of online parameter display,2,42,,,,,,,
+Welding Operation,Performing spot welding operation,Spot burr,,"[Spot Welding]
+Part breakage",9,,,"[Robot]
+More weld time",6,Process qualification,setting    of online parameter display,4,216,,,,,,,
+Welding Operation,Performing spot welding operation,Spot burr,,"[Spot Welding]
+Part breakage",9,,,"[Robot]
+High current",4,Process qualification,setting    of online parameter display,3,108,,,,,,,
+Welding Operation,Performing spot welding operation,Spot burr,,"[Spot Welding]
+Improper parts assembly",5,,,"[Robot]
+High current",4,Process qualification,setting    of online parameter display,3,108,,,,,,,

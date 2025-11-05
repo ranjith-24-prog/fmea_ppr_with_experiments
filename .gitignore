@@ -1,0 +1,95 @@
+Byte-compiled / optimized / DLL files
+pycache/
+*.py[cod]
+*$py.class
+
+C extensions
+*.so
+*.pyd
+*.dll
+
+Virtual environments
+.venv/
+venv/
+env/
+ENV/
+pip-wheel-metadata/
+
+Environment and secrets
+.env
+.env.*
+!.env.example
+
+SQLite databases and journals
+*.sqlite3
+*.db
+*.db-journal
+*.sqlite
+*.sqlite-journal
+
+Streamlit
+.streamlit/cache/
+.streamlit/secrets.toml
+
+Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+pytest_cache/
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+
+Build / packaging
+build/
+dist/
+*.egg-info/
+*.egg
+.eggs/
+wheels/
+MANIFEST
+site/
+
+Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+Logs
+*.log
+logs/
+
+IDEs / Editors
+.vscode/
+.code-workspace
+.idea/
+*.iml
+*.sublime-project
+*.sublime-workspace
+.spyderproject
+.spyproject
+
+OS-specific
+.DS_Store
+Thumbs.db
+desktop.ini
+
+Python tooling
+mypy_cache/
+.pytype/
+.pyre/
+
+Misc caches
+*.cache/
+**/pypackages/
+.pdm-python
+.hypothesis/
+
+Node (if any front-end assets later)
+node_modules/
+
+Project-specific (adjust as needed)
+fmea.sqlite3
