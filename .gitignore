@@ -97,7 +97,7 @@ pdm.toml
 # virtual environments
 .venv/
 venv/
-env/
+.env/
 ENV/
 
 # Spyder project settings
