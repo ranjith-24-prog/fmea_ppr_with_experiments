@@ -28,6 +28,54 @@ from backend.backend_fmea_pipeline import (
     generate_ppr_only,       # returns PPR with "input_products" + classic keys
 )
 
+
+st.markdown("""
+<style>
+/* Buttons in red */
+div.stButton > button {
+    background-color: #D32F2F !important;
+    color: #fff !important;
+    font-weight: 600;
+    border: none;
+    border-radius: 6px;
+    font-family: 'Segoe UI', 'Arial', sans-serif;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+    padding: 8px 18px;
+    margin: 8px 0px;
+}
+
+/* AgGrid header styling */
+.ag-theme-alpine .ag-header {
+    background-color: #FFCDD2 !important;
+}
+.ag-theme-alpine .ag-header-cell {
+    background-color: #FFCDD2 !important;
+    color: #D32F2F !important;
+    font-family: 'Segoe UI', 'Arial', sans-serif !important;
+    font-size: 16px !important;
+    font-weight: bold !important;
+    border-bottom: 2px solid #D32F2F;
+}
+.ag-theme-alpine .ag-header-cell-label {
+    color: #D32F2F !important;
+    font-family: 'Segoe UI', 'Arial', sans-serif !important;
+    font-size: 16px !important;
+    font-weight: bold !important;
+}
+
+body, h1, h2, h3, h4, h5, h6, p {
+    font-family: 'Segoe UI', 'Arial', sans-serif;
+}
+
+.ag-theme-alpine .ag-cell {
+    font-family: 'Segoe UI', 'Arial', sans-serif !important;
+    font-size: 15px !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+
+
 # -----------------------
 # Env and helpers
 # -----------------------
@@ -80,7 +128,7 @@ def bootstrap():
 embedder, llm = bootstrap()
 
 test_vec = embedder.embed("test")
-st.write("Embedding length:", len(test_vec))
+#st.write("Embedding length:", len(test_vec))
 
 # -----------------------
 # PPR helpers (4-pillar)
@@ -445,16 +493,27 @@ if mode == "Knowledge Base":
             enable_enterprise_modules=False,
             fit_columns_on_grid_load=True,
             height=400,
+            theme="ag-theme-alpine",  # <--- add this for consistent styling
         )
         edited_fmea_df = grid_response["data"]
         st.session_state["parsed_fmea"] = edited_fmea_df.to_dict(orient="records")
 
+
+        # --- PPR editor (4-pillar) ---
+        st.subheader("Review/Edit PPR (mandatory)")
+        st.info(
+            "Enter comma-separated values. Example — Input Products: aluminium tube, shielding gas; "
+            "Output Products: welded bottle; Processes: ultrasonic welding; Resources: welding gun"
+        )
+
+        current_ppr = _normalize_ppr_safe(st.session_state.get("parsed_ppr"))
+        st.session_state["parsed_ppr"] = ppr_editor_block("kb_ppr", current_ppr)
+
         # --- PPR generation from user description ---
-        st.markdown("### Generate PPR from description")
-        with st.expander("Describe the uploaded content to auto-generate PPR", expanded=False):
+        with st.expander("Optionally click here to auto-generate PPR", expanded=False):
             desc = st.text_area(
-                "Short description (what the file contains, processes, materials, tools)",
-                placeholder="Example: Aluminium profiles welded with shielding gas; vision inspection; ultrasonic press; filler wire ER4043",
+                "Short description (what the file contains, processes, products, resources)",
+                placeholder="Example: Manual Aluminium Airframe TIG Welding involves joining aluminum airframe components using TIG welding with suitable filler material and shielding gas. The process includes preparation, setup, welding execution, post-weld treatments, and inspection. Skilled operators utilize TIG welding and NDT equipment to ensure high-quality, defect-free welds.",
                 height=80,
                 key="kb_ppr_desc"
             )
@@ -497,7 +556,7 @@ if mode == "Knowledge Base":
             llm_kb = LLM(model_name=st.session_state["active_model_id"])
             llm_kb.set_model(st.session_state["active_model_id"])
 
-            if st.button("Generate PPR", key="kb_generate_ppr_from_desc", use_container_width=True):
+            if st.button("Generate PPR", key="kb_generate_ppr_from_desc"):
                 import time
                 t0 = time.time()
                 try:
@@ -526,16 +585,6 @@ if mode == "Knowledge Base":
                 except Exception as e:
                     st.error(f"PPR generation failed: {e}")
 
-        # --- PPR editor (4-pillar) ---
-        st.subheader("Review/Edit PPR (mandatory)")
-        st.info(
-            "Enter comma-separated values. Example — Input Products: aluminium tube, shielding gas; "
-            "Processes: ultrasonic welding; Resources: welding gun; Output Products: welded bottle"
-        )
-
-        current_ppr = _normalize_ppr_safe(st.session_state.get("parsed_ppr"))
-        st.session_state["parsed_ppr"] = ppr_editor_block("kb_ppr", current_ppr)
-
         # Optional Graph view (on demand)
         show_kb_graph = st.checkbox("Graph view", value=False, key="kb_graph_toggle")
         if show_kb_graph:
@@ -549,9 +598,6 @@ if mode == "Knowledge Base":
         procs_list  = [x for x in pp["processes"]      if x and x.strip()]
         ress_list   = [x for x in pp["resources"]      if x and x.strip()]
 
-        # Optional: log to verify
-        st.write({"DBG_inputs": inputs_list, "DBG_products": prods_list,
-                "DBG_processes": procs_list, "DBG_resources": ress_list})
 
         if not any([inputs_list, prods_list, procs_list, ress_list]):
             st.warning("Please add at least one Input/Product/Process/Resource before saving.")
@@ -593,6 +639,10 @@ if mode == "Knowledge Base":
                 if not case_title.strip():
                     st.error("Please enter a case title.")
                     st.stop()
+                elif not case_desc.strip():
+                    st.error("Please enter a case description.")
+                    st.stop()
+
                 case_resp = sb.table("cases").insert({
                     "title": case_title.strip(),
                     "description": case_desc.strip()
@@ -787,9 +837,9 @@ elif mode == "FMEA Assistant":
 
     # 1) Single input box used for FMEA and later for PPR (persisted via key)
     user_text = st.text_area(
-        "Describe the context (product/process/resources) in one text box",
+        "Enter the description of FMEA required. (please specify product/process/resources details if possible) ",
         height=120,
-        placeholder="Example: Aluminium profile, ultrasonic welding with shielding gas for chassis components; fixtures and vision camera in final inspection.",
+        placeholder="Example: Manual Aluminium Airframe TIG Welding involves joining aluminum airframe components using TIG welding with suitable filler material and shielding gas. The process includes preparation, setup, welding execution, post-weld treatments, and inspection. Skilled operators utilize TIG welding and NDT equipment to ensure high-quality, defect-free welds.",
         key="fa_user_text",
         value=st.session_state.get("fa_user_text", "")
     )
@@ -1030,6 +1080,7 @@ elif mode == "FMEA Assistant":
             enable_enterprise_modules=False,
             fit_columns_on_grid_load=True,
             height=420,
+            theme="ag-theme-alpine",  # <--- add this for consistent styling
         )
 
         st.markdown(
@@ -1119,13 +1170,20 @@ elif mode == "FMEA Assistant":
             render_ppr_graph(st.session_state["assistant_ppr"], key="fa_ppr_graph")
 
         # 5) Save as test case (uses current editor PPR)
-        with st.expander("Save as test case", expanded=False):
+
+
+        # Initialize the state for the expander if not present
+        if "fa_save_expander_open" not in st.session_state:
+            st.session_state["fa_save_expander_open"] = False
+
+        with st.expander("Save as test case", expanded=st.session_state["fa_save_expander_open"]):
             c1, c2 = st.columns([2, 3])
             with c1:
-                case_title = st.text_input("Case title", value="FMEA Assistant draft", key="fa_case_title")
+                case_title = st.text_input("Case title", placeholder="Manual Aluminium airframe TIG welding.", key="fa_case_title")
             with c2:
-                case_desc = st.text_area("Case description", height=80, value="Generated via FMEA Assistant review.", key="fa_case_desc")
-
+                case_desc = st.text_area("Case description", height=140, placeholder="Manual Aluminium Airframe TIG Welding involves joining aluminum airframe components using TIG welding with suitable filler material and shielding gas. The process includes preparation, setup, welding execution, post-weld treatments, and inspection. Skilled operators utilize TIG welding and NDT equipment to ensure high-quality, defect-free welds.", key="fa_case_desc")
+            
+            
             def _sanitize_rows_for_db_from_df(df_in: pd.DataFrame) -> list[dict]:
                 df = df_in.copy()
                 rename_map = {
@@ -1168,36 +1226,43 @@ elif mode == "FMEA Assistant":
                     if col not in df.columns: df[col] = None
                 return df[allowed].to_dict(orient="records")
 
+            # Save button logic
             if st.button("Save test case", key="fa_save_test_case"):
-                # Pre-checks outside try
-                if not os.getenv("SUPABASE_URL") or not os.getenv("SUPABASE_ANON_KEY"):
-                    st.error("SUPABASE_URL or SUPABASE_ANON_KEY not set.")
-                    st.stop()
-
-                try:
-                    sb = _build_supabase()
-
-                    fmea_rows_clean = _sanitize_rows_for_db_from_df(st.session_state["edited_df"])
-
-                    # 1) Create case
-                    title = (case_title or "").strip() or "FMEA Assistant draft"
-                    desc  = (case_desc or "").strip()
-                    case_resp = sb.table("cases").insert({"title": title, "description": desc}).execute()
-                    case_id = case_resp.data[0]["id"]
-
-                    # Persist ID for exports so the next render picks it up
-                    st.session_state["last_saved_case_id"] = case_id
-
-                    # (Keep the rest of your save logic here if you had more steps after creating the case)
-                    # e.g., linking PPR, inserting rows, kb_index upsert, etc.
-
-                except Exception as e:
-                    st.error(f"Save failed: {e}")
+                if not case_title or not case_title.strip():
+                    st.session_state["fa_save_expander_open"] = True  # Keep expander open
+                    st.error("Please enter a case title before saving.")
+                elif not case_desc or not case_desc.strip():
+                    st.session_state["fa_save_expander_open"] = True  # Keep expander open
+                    st.error("Please enter a case description before saving.")
                 else:
-                    # Only if no exception happened: show toast and rerun
-                    # Persist a success banner for the next render
-                    st.session_state["fa_save_success_msg"] = f"Saved test case #{case_id}."
-                    st.rerun()
+                    # Successful save: optionally close expander
+                    st.session_state["fa_save_expander_open"] = False
+                    if not os.getenv("SUPABASE_URL") or not os.getenv("SUPABASE_ANON_KEY"):
+                        st.error("SUPABASE_URL or SUPABASE_ANON_KEY not set.")
+                        st.stop()
+
+                    try:
+                        sb = _build_supabase()
+
+                        fmea_rows_clean = _sanitize_rows_for_db_from_df(st.session_state["edited_df"])
+
+                        # 1) Create case
+                        title = case_title.strip()
+                        desc = case_desc.strip()
+                        case_resp = sb.table("cases").insert({"title": title, "description": desc}).execute()
+                        case_id = case_resp.data[0]["id"]
+
+                        # Persist ID for exports so the next render picks it up
+                        st.session_state["last_saved_case_id"] = case_id
+
+                        # Your additional save logic here...
+
+                    except Exception as e:
+                        st.error(f"Save failed: {e}")
+                    else:
+                        st.session_state["fa_save_success_msg"] = f"Saved test case #{case_id}."
+                        st.rerun()
+
 
         msg = st.session_state.pop("fa_save_success_msg", None)
         if msg:

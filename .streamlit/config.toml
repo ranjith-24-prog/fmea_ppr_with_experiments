@@ -1,0 +1,6 @@
+[theme]
+primaryColor = "#D32F2F"           # Red for buttons
+backgroundColor = "#F3F3F3"        # Soft background
+secondaryBackgroundColor = "#FFFFFF"
+textColor = "#212121"              # Deep gray text
+font = "sans serif"                # Clean font
