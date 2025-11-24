@@ -9,7 +9,7 @@ import json
 import pandas as pd
 import streamlit as st
 import datetime as dt
-import st_cytoscape  # pip install st-cytoscape
+#import st_cytoscape  # pip install st-cytoscape
 st.set_page_config(page_title="CBR FMEA Assistant", layout="wide")
 from dotenv import load_dotenv
 load_dotenv()
@@ -230,18 +230,6 @@ def ppr_to_cytoscape(ppr: dict):
                                         "target-arrow-shape": "triangle", "target-arrow-color": "#cfcfcf"}},
     ]
     return elements, stylesheet
-
-def render_ppr_graph(ppr: dict, key: str):
-    elements, stylesheet = ppr_to_cytoscape(ppr)
-    # Most st-cytoscape builds accept width/height params; remove style/container_style to avoid TypeError
-    st_cytoscape.cytoscape(
-        elements=elements,
-        stylesheet=stylesheet,
-        layout={"name": "breadthfirst", "directed": True, "padding": 15},
-        width="100%",
-        height=460,
-        key=key,
-    )
 
 
 # -----------------------
@@ -585,10 +573,6 @@ if mode == "Knowledge Base":
                 except Exception as e:
                     st.error(f"PPR generation failed: {e}")
 
-        # Optional Graph view (on demand)
-        show_kb_graph = st.checkbox("Graph view", value=False, key="kb_graph_toggle")
-        if show_kb_graph:
-            render_ppr_graph(st.session_state["parsed_ppr"], key="kb_ppr_graph")
 
         # Guard: require at least one list populated
         # Re-read the latest editor values just-in-time
@@ -1164,10 +1148,6 @@ elif mode == "FMEA Assistant":
         edited_ppr = ppr_editor_block("fa_ppr", ppr_cur)
         st.session_state["assistant_ppr"] = _normalize_ppr_safe(edited_ppr)
 
-        # Optional Graph
-        show_fa_graph = st.checkbox("Graph view", value=False, key="fa_graph_toggle")
-        if show_fa_graph:
-            render_ppr_graph(st.session_state["assistant_ppr"], key="fa_ppr_graph")
 
         # 5) Save as test case (uses current editor PPR)
 
