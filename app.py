@@ -9,16 +9,15 @@ import json
 import pandas as pd
 import streamlit as st
 import datetime as dt
-#import st_cytoscape  # pip install st-cytoscape
 st.set_page_config(page_title="CBR FMEA Assistant", layout="wide")
 from backend.export import to_pretty_excel_bytes, to_structured_xml_bytes
 from supabase import create_client, Client
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 
 # Backend utilities (project-specific; keep names as in your repo)
-from backend.db import init_and_seed, get_conn
+#from backend.db import init_and_seed, get_conn
 from backend.llm import Embeddings, LLM, LLM_REGISTRY
-from backend.repository import get_all_ontology, search_ontology_by_type
+#from backend.repository import get_all_ontology, search_ontology_by_type
 from backend.file_parser import parse_xml_fmea
 from backend.backend_fmea_pipeline import (
     process_excel_for_preview,
@@ -80,22 +79,27 @@ body, h1, h2, h3, h4, h5, h6, p {
 
 @st.cache_resource
 def get_embedder():
-    # If you have your own init_and_seed, keep it here
-    try:
-        init_and_seed()
-    except Exception:
-        pass
     return Embeddings()
 
 embedder = get_embedder()
 
 
+def _get_secret(name: str, default: str | None = None) -> str | None:
+    # Try st.secrets first (Streamlit), then fall back to environment variables for local use
+    if name in st.secrets:
+        return st.secrets[name]
+    return os.getenv(name, default)
+
 def _build_supabase() -> Client:
-    url = st.secrets("SUPABASE_URL")
-    key = st.secrets("SUPABASE_ANON_KEY")
+    url = _get_secret("SUPABASE_URL")
+    key = _get_secret("SUPABASE_ANON_KEY")
+
     if not url or not key:
-        raise RuntimeError("Missing SUPABASE_URL or SUPABASE_ANON_KEY")
+        st.error("SUPABASE_URL or SUPABASE_ANON_KEY not set.")
+        st.stop()
+
     return create_client(url, key)
+
 
 def _supabase_bucket_name() -> str:
     return st.secrets("SUPABASE_BUCKET", "kb-files")
@@ -118,7 +122,6 @@ def _guess_mime(filename: str) -> str:
 
 @st.cache_resource
 def bootstrap():
-    init_and_seed()
     embedder = Embeddings()
     llm = LLM(model_name="sonar-pro")
     return embedder, llm
@@ -805,10 +808,6 @@ elif mode == "FMEA Assistant":
     st.session_state.setdefault("fa_fmea_ms", None)       # Overall (button to ready)
     st.session_state.setdefault("fa_ppr_ms", None)        # PPR LLM time
 
-    # Ontology cache
-    with get_conn() as conn:
-        _ = get_all_ontology(conn)
-
     # 0) Ensure session defaults exist (adds only keys we use)
     if "fa_user_text" not in st.session_state:
         st.session_state["fa_user_text"] = ""
@@ -1090,44 +1089,55 @@ elif mode == "FMEA Assistant":
 
         st.session_state["edited_df"] = edited_df
 
-    # 4b) PPR editor and Generate PPR (below grid)
+        # 4b) PPR editor and Generate PPR (below grid)
     if "proposed_rows" in st.session_state:
         st.markdown("---")
         st.subheader("PPR")
 
-        # Persistent timing readouts (always visible, now with split)
+        # Persistent timing readouts
         timelines = []
         kb_ms = st.session_state.get("fa_fmea_kb_ms")
         llm_ms = st.session_state.get("fa_fmea_llm_ms")
         tot_ms = st.session_state.get("fa_fmea_ms")
-        if kb_ms is not None: timelines.append(f"KB: {kb_ms} ms")
-        if llm_ms is not None: timelines.append(f"LLM: {llm_ms} ms")
-        if tot_ms is not None: timelines.append(f"FMEA total: {tot_ms} ms")
+        if kb_ms is not None:
+            timelines.append(f"KB: {kb_ms} ms")
+        if llm_ms is not None:
+            timelines.append(f"LLM: {llm_ms} ms")
+        if tot_ms is not None:
+            timelines.append(f"FMEA total: {tot_ms} ms")
         if st.session_state.get("fa_ppr_ms") is not None:
             timelines.append(f"PPR: {st.session_state['fa_ppr_ms']} ms")
         if timelines:
             st.caption(" | ".join(timelines))
 
         # Ensure normalized key exists
-        st.session_state["assistant_ppr"] = _normalize_ppr_safe(st.session_state.get("assistant_ppr", {
-            "input_products": [], "products": [], "processes": [], "resources": []
-        }))
+        st.session_state["assistant_ppr"] = _normalize_ppr_safe(
+            st.session_state.get(
+                "assistant_ppr",
+                {"input_products": [], "products": [], "processes": [], "resources": []},
+            )
+        )
 
-        # Generate PPR first; then render editor; use persisted description
+        # Generate PPR button
         if st.button("Generate PPR", key="fa_generate_ppr", use_container_width=True):
             import time
-            t0 = time.time()
 
+            t0 = time.time()
             try:
                 if "edited_df" in st.session_state and st.session_state["edited_df"] is not None:
-                    rows_for_ppr = pd.DataFrame(st.session_state["edited_df"]).to_dict(orient="records")
+                    rows_for_ppr = pd.DataFrame(st.session_state["edited_df"]).to_dict(
+                        orient="records"
+                    )
                 else:
                     rows_for_ppr = st.session_state.get("proposed_rows", [])
             except Exception:
                 rows_for_ppr = st.session_state.get("proposed_rows", [])
 
             if not rows_for_ppr and not (user_text and user_text.strip()):
-                st.warning("No FMEA rows available and description is empty. Please generate FMEA or enter a description.")
+                st.warning(
+                    "No FMEA rows available and description is empty. "
+                    "Please generate FMEA or enter a description."
+                )
             else:
                 with st.spinner("Requesting PPR from LLM (KB-style)..."):
                     ppr_new = _llm_ppr_same_as_kb(user_text, rows_for_ppr)
@@ -1137,129 +1147,324 @@ elif mode == "FMEA Assistant":
                     st.session_state["fa_ppr_ms"] = int((time.time() - t0) * 1000)
                     st.rerun()
                 else:
-                    st.error("LLM returned empty PPR. Check the debug expander above for payload and raw output.")
+                    st.error(
+                        "LLM returned empty PPR. Check the debug expander above for payload and raw output."
+                    )
 
-        # Render editor with latest value from session
-        ppr_cur = _normalize_ppr_safe(st.session_state.get("assistant_ppr", {
-            "input_products": [], "products": [], "processes": [], "resources": []
-        }))
+        # PPR editor
+        ppr_cur = _normalize_ppr_safe(
+            st.session_state.get(
+                "assistant_ppr",
+                {"input_products": [], "products": [], "processes": [], "resources": []},
+            )
+        )
         edited_ppr = ppr_editor_block("fa_ppr", ppr_cur)
         st.session_state["assistant_ppr"] = _normalize_ppr_safe(edited_ppr)
 
+        # 5) Save as test case (no expander)
+        st.markdown("### Save as test case")
 
-        # 5) Save as test case (uses current editor PPR)
+        c1, c2 = st.columns([2, 3])
+        with c1:
+            case_title = st.text_input(
+                "Case title",
+                placeholder="Manual Aluminium airframe TIG welding.",
+                key="fa_case_title",
+            )
+        with c2:
+            case_desc = st.text_area(
+                "Case description",
+                height=140,
+                placeholder=(
+                    "Manual Aluminium Airframe TIG Welding involves joining aluminum airframe "
+                    "components using TIG welding with suitable filler material and shielding gas. "
+                    "The process includes preparation, setup, welding execution, post-weld treatments, "
+                    "and inspection. Skilled operators utilize TIG welding and NDT equipment to ensure "
+                    "high-quality, defect-free welds."
+                ),
+                key="fa_case_desc",
+            )
 
+        def _sanitize_rows_for_db_from_df(df_in: pd.DataFrame) -> list[dict]:
+            df = df_in.copy()
+            rename_map = {
+                "systemelement": "system_element",
+                "potentialfailure": "potential_failure",
+                "potentialeffect": "potential_effect",
+                "potentialcause": "potential_cause",
+                "currentpreventiveaction": "current_preventive_action",
+                "currentdetectionaction": "current_detection_action",
+                "recommendedaction": "recommended_action",
+                "actiontaken": "action_taken",
+            }
+            df.rename(
+                columns={k: v for k, v in rename_map.items() if k in df.columns},
+                inplace=True,
+            )
+            int_cols = ["s1", "o1", "d1", "rpn1", "s2", "o2", "d2", "rpn2"]
+            for col in int_cols:
+                if col in df.columns:
 
-        # Initialize the state for the expander if not present
-        if "fa_save_expander_open" not in st.session_state:
-            st.session_state["fa_save_expander_open"] = False
+                    def to_int_or_none(x):
+                        if x is None:
+                            return None
+                        sx = str(x).strip()
+                        if sx == "" or sx.lower() == "nan":
+                            return None
+                        try:
+                            return int(float(sx))
+                        except Exception:
+                            return None
 
-        with st.expander("Save as test case", expanded=st.session_state["fa_save_expander_open"]):
-            c1, c2 = st.columns([2, 3])
-            with c1:
-                case_title = st.text_input("Case title", placeholder="Manual Aluminium airframe TIG welding.", key="fa_case_title")
-            with c2:
-                case_desc = st.text_area("Case description", height=140, placeholder="Manual Aluminium Airframe TIG Welding involves joining aluminum airframe components using TIG welding with suitable filler material and shielding gas. The process includes preparation, setup, welding execution, post-weld treatments, and inspection. Skilled operators utilize TIG welding and NDT equipment to ensure high-quality, defect-free welds.", key="fa_case_desc")
-            
-            
-            def _sanitize_rows_for_db_from_df(df_in: pd.DataFrame) -> list[dict]:
-                df = df_in.copy()
-                rename_map = {
-                    "systemelement": "system_element",
-                    "potentialfailure": "potential_failure",
-                    "potentialeffect": "potential_effect",
-                    "potentialcause": "potential_cause",
-                    "currentpreventiveaction": "current_preventive_action",
-                    "currentdetectionaction": "current_detection_action",
-                    "recommendedaction": "recommended_action",
-                    "actiontaken": "action_taken",
-                }
-                df.rename(columns={k: v for k, v in rename_map.items() if k in df.columns}, inplace=True)
-                int_cols = ["s1","o1","d1","rpn1","s2","o2","d2","rpn2"]
-                for col in int_cols:
-                    if col in df.columns:
-                        def to_int_or_none(x):
-                            if x is None: return None
-                            sx = str(x).strip()
-                            if sx == "" or sx.lower() == "nan": return None
-                            try: return int(float(sx))
-                            except: return None
-                        df[col] = df[col].map(to_int_or_none)
-                for col in df.columns:
-                    if col not in int_cols:
-                        def to_str_or_none(x):
-                            if x is None or (isinstance(x, float) and pd.isna(x)): return None
-                            sx = str(x).strip()
-                            return None if sx.lower() == "nan" or sx == "" else sx
-                        df[col] = df[col].map(to_str_or_none)
-                allowed = [
-                    "system_element","function","potential_failure","c1",
-                    "potential_effect","s1","c2","c3",
-                    "potential_cause","o1","current_preventive_action",
-                    "current_detection_action","d1","rpn1",
-                    "recommended_action","rd","action_taken",
-                    "s2","o2","d2","rpn2","notes"
-                ]
-                for col in allowed:
-                    if col not in df.columns: df[col] = None
-                return df[allowed].to_dict(orient="records")
+                    df[col] = df[col].map(to_int_or_none)
 
-            # Save button logic
-            if st.button("Save test case", key="fa_save_test_case"):
-                if not case_title or not case_title.strip():
-                    st.session_state["fa_save_expander_open"] = True  # Keep expander open
-                    st.error("Please enter a case title before saving.")
-                elif not case_desc or not case_desc.strip():
-                    st.session_state["fa_save_expander_open"] = True  # Keep expander open
-                    st.error("Please enter a case description before saving.")
-                else:
-                    # Successful save: optionally close expander
-                    st.session_state["fa_save_expander_open"] = False
-                    if not st.secrets("SUPABASE_URL") or not st.secrets("SUPABASE_ANON_KEY"):
-                        st.error("SUPABASE_URL or SUPABASE_ANON_KEY not set.")
-                        st.stop()
+            for col in df.columns:
+                if col not in int_cols:
 
-                    try:
-                        sb = _build_supabase()
+                    def to_str_or_none(x):
+                        if x is None or (isinstance(x, float) and pd.isna(x)):
+                            return None
+                        sx = str(x).strip()
+                        return None if sx.lower() == "nan" or sx == "" else sx
 
-                        fmea_rows_clean = _sanitize_rows_for_db_from_df(st.session_state["edited_df"])
+                    df[col] = df[col].map(to_str_or_none)
 
-                        # 1) Create case
-                        title = case_title.strip()
-                        desc = case_desc.strip()
-                        case_resp = sb.table("cases").insert({"title": title, "description": desc}).execute()
-                        case_id = case_resp.data[0]["id"]
+            allowed = [
+                "system_element",
+                "function",
+                "potential_failure",
+                "c1",
+                "potential_effect",
+                "s1",
+                "c2",
+                "c3",
+                "potential_cause",
+                "o1",
+                "current_preventive_action",
+                "current_detection_action",
+                "d1",
+                "rpn1",
+                "recommended_action",
+                "rd",
+                "action_taken",
+                "s2",
+                "o2",
+                "d2",
+                "rpn2",
+                "notes",
+            ]
+            for col in allowed:
+                if col not in df.columns:
+                    df[col] = None
+            return df[allowed].to_dict(orient="records")
 
-                        # Persist ID for exports so the next render picks it up
-                        st.session_state["last_saved_case_id"] = case_id
+        def _to_plain_list(v):
+            if v is None:
+                return None
+            try:
+                if hasattr(v, "tolist"):
+                    return v.tolist()
+                if isinstance(v, (list, tuple)):
+                    return list(v)
+                import numpy as np
 
-                        # Your additional save logic here...
+                return list(np.array(v).ravel())
+            except Exception:
+                return None
 
-                    except Exception as e:
-                        st.error(f"Save failed: {e}")
+        if st.button("Save test case", key="fa_save_test_case"):
+            if not case_title or not case_title.strip():
+                st.error("Please enter a case title before saving.")
+            elif not case_desc or not case_desc.strip():
+                st.error("Please enter a case description before saving.")
+            else:
+                if not _get_secret("SUPABASE_URL") or not _get_secret("SUPABASE_ANON_KEY"):
+                    st.error("SUPABASE_URL or SUPABASE_ANON_KEY not set.")
+                    st.stop()
+
+                try:
+                    sb = _build_supabase()
+
+                    # 1) Create case
+                    title = case_title.strip()
+                    desc = case_desc.strip()
+                    case_resp = (
+                        sb.table("cases")
+                        .insert({"title": title, "description": desc})
+                        .execute()
+                    )
+                    case_id = case_resp.data[0]["id"]
+                    st.session_state["last_saved_case_id"] = case_id
+
+                    # 2) Insert FMEA rows
+                    if "edited_df" not in st.session_state or st.session_state["edited_df"] is None:
+                        raise ValueError("No edited FMEA rows available to save.")
+                    fmea_rows_clean = _sanitize_rows_for_db_from_df(
+                        st.session_state["edited_df"]
+                    )
+                    for r in fmea_rows_clean:
+                        r["case_id"] = case_id
+                    if fmea_rows_clean:
+                        sb.table("fmea_rows").insert(fmea_rows_clean).execute()
                     else:
-                        st.session_state["fa_save_success_msg"] = f"Saved test case #{case_id}."
-                        st.rerun()
+                        st.warning("No FMEA rows to insert after sanitization.")
 
+                    # 3) PPR tables and links
+                    ppr = _normalize_ppr_safe(
+                        st.session_state.get(
+                            "assistant_ppr",
+                            {
+                                "input_products": [],
+                                "products": [],
+                                "processes": [],
+                                "resources": [],
+                            },
+                        )
+                    )
+                    inputs_list = [x for x in ppr["input_products"] if x and x.strip()]
+                    prods_list = [x for x in ppr["products"] if x and x.strip()]
+                    procs_list = [x for x in ppr["processes"] if x and x.strip()]
+                    ress_list = [x for x in ppr["resources"] if x and x.strip()]
+
+                    inputs_list = sorted({x.strip() for x in inputs_list})
+                    prods_list = sorted({x.strip() for x in prods_list})
+                    procs_list = sorted({x.strip() for x in procs_list})
+                    ress_list = sorted({x.strip() for x in ress_list})
+
+                    def _get_or_create_ppr_local(sb, table, name):
+                        name = (name or "").strip()
+                        if not name:
+                            return None
+                        existing = (
+                            sb.table(table)
+                            .select("id")
+                            .eq("name", name)
+                            .limit(1)
+                            .execute()
+                            .data
+                        )
+                        if existing:
+                            return existing[0]["id"]
+                        rec = sb.table(table).insert({"name": name}).execute().data
+                        return rec[0]["id"] if rec and isinstance(rec, list) else None
+
+                    input_ids = [
+                        _get_or_create_ppr_local(sb, "inputs", n) for n in inputs_list
+                    ] if inputs_list else []
+                    prod_ids = [
+                        _get_or_create_ppr_local(sb, "products", n) for n in prods_list
+                    ]
+                    proc_ids = [
+                        _get_or_create_ppr_local(sb, "processes", n) for n in procs_list
+                    ]
+                    res_ids = [
+                        _get_or_create_ppr_local(sb, "resources", n) for n in ress_list
+                    ]
+
+                    def _link_case_ppr_local(sb, case_id, table, id_field, ids):
+                        rows = [{"case_id": case_id, id_field: pid} for pid in ids if pid]
+                        if rows:
+                            sb.table(table).upsert(
+                                rows, on_conflict=f"case_id,{id_field}"
+                            ).execute()
+
+                    if input_ids:
+                        _link_case_ppr_local(sb, case_id, "case_inputs", "input_id", input_ids)
+                    _link_case_ppr_local(sb, case_id, "case_products", "product_id", prod_ids)
+                    _link_case_ppr_local(sb, case_id, "case_processes", "process_id", proc_ids)
+                    _link_case_ppr_local(sb, case_id, "case_resources", "resource_id", res_ids)
+
+
+                    def _upsert_case_scoped_ppr(sb, table: str, case_id: int, names: list[str], name_col: str = "name"):
+                        for nm in names:
+                            if not nm:
+                                continue
+                            # Does a row with this (name, case_id) already exist?
+                            exists = (
+                                sb.table(table)
+                                .select("id")
+                                .eq("case_id", case_id)
+                                .eq(name_col, nm)
+                                .limit(1)
+                                .execute()
+                                .data
+                                or []
+                            )
+                            if exists:
+                                continue
+                            try:
+                                # Insert a new row with name + case_id
+                                sb.table(table).insert({name_col: nm, "case_id": case_id}).execute()
+                            except Exception:
+                                # Fallback: if a row with this name exists but case_id is null, update it
+                                try:
+                                    sb.table(table).update({"case_id": case_id}).eq(name_col, nm).is_("case_id", "null").execute()
+                                except Exception:
+                                    pass
+
+                    _upsert_case_scoped_ppr(sb, "inputs",    case_id, inputs_list)
+                    _upsert_case_scoped_ppr(sb, "products",  case_id, prods_list)
+                    _upsert_case_scoped_ppr(sb, "processes", case_id, procs_list)
+                    _upsert_case_scoped_ppr(sb, "resources", case_id, ress_list)
+
+
+
+                    # RAG index
+                    inputs_txt = ", ".join(inputs_list)
+                    prod_txt = ", ".join(prods_list)
+                    proc_txt = ", ".join(procs_list)
+                    res_txt = ", ".join(ress_list)
+
+                    inp_vec = _to_plain_list(embedder.embed(inputs_txt)) if inputs_txt else None
+                    prod_vec = _to_plain_list(embedder.embed(prod_txt))   if prod_txt else None
+                    proc_vec = _to_plain_list(embedder.embed(proc_txt))   if proc_txt else None
+                    res_vec = _to_plain_list(embedder.embed(res_txt))     if res_txt else None
+
+                    rec_full = {
+                        "case_id": case_id,
+                        "inputs_text": inputs_txt or None,
+                        "products_text": prod_txt or None,
+                        "processes_text": proc_txt or None,
+                        "resources_text": res_txt or None,
+                        "inp_vec": inp_vec,
+                        "prod_vec": prod_vec,
+                        "proc_vec": proc_vec,
+                        "res_vec": res_vec,
+                    }
+                    try:
+                        sb.table("kb_index").upsert(rec_full, on_conflict="case_id").execute()
+                    except Exception as e:
+                        st.warning(f"kb_index upsert (full) failed: {e}")
+
+                    st.success(
+                        f"Created test case #{case_id} with FMEA rows, PPR links, and kb_index."
+                    )
+
+                except Exception as e:
+                    st.error(f"Save failed: {e}")
+                else:
+                    st.session_state["fa_save_success_msg"] = f"Saved test case #{case_id}."
+                    st.rerun()
 
         msg = st.session_state.pop("fa_save_success_msg", None)
         if msg:
             st.success(msg)
 
-        # 6) Export (after Save) — side-by-side buttons
-
+        # 6) Export (after Save)
         st.markdown("---")
         st.subheader("Export")
 
-        # Compose meta freshly on each render
         case_id_for_export = st.session_state.get("last_saved_case_id")
         case_title_for_export = st.session_state.get("fa_case_title", "")
-        case_desc_for_export  = st.session_state.get("fa_case_desc", "")
-        model_label = LLM_REGISTRY[st.session_state["active_model_id"]]["label"] if "active_model_id" in st.session_state else ""
+        case_desc_for_export = st.session_state.get("fa_case_desc", "")
+        model_label = (
+            LLM_REGISTRY[st.session_state["active_model_id"]]["label"]
+            if "active_model_id" in st.session_state
+            else ""
+        )
         timing_fmea_ms = st.session_state.get("fa_fmea_ms")
-        timing_ppr_ms  = st.session_state.get("fa_ppr_ms")
-        # Split timings
-        timing_fmea_kb_ms  = st.session_state.get("fa_fmea_kb_ms")
+        timing_ppr_ms = st.session_state.get("fa_ppr_ms")
+        timing_fmea_kb_ms = st.session_state.get("fa_fmea_kb_ms")
         timing_fmea_llm_ms = st.session_state.get("fa_fmea_llm_ms")
 
         ppr_for_export = _normalize_ppr_safe(st.session_state.get("assistant_ppr") or {})
@@ -1277,11 +1482,11 @@ elif mode == "FMEA Assistant":
             case_desc=case_desc_for_export,
             model_label=model_label,
             timing_fmea_ms=timing_fmea_ms,
-            timing_fpr_ms_ppr=timing_ppr_ms,           # mapped in export to keep signature explicit
+            timing_fpr_ms_ppr=timing_ppr_ms,
             timing_fmea_kb_ms=timing_fmea_kb_ms,
             timing_fmea_llm_ms=timing_fmea_llm_ms,
             ppr=ppr_for_export,
-            fmea_rows_df=fmea_df
+            fmea_rows_df=fmea_df,
         )
 
         xml_bytes = to_structured_xml_bytes(
@@ -1294,7 +1499,7 @@ elif mode == "FMEA Assistant":
             timing_fmea_kb_ms=timing_fmea_kb_ms,
             timing_fmea_llm_ms=timing_fmea_llm_ms,
             ppr=ppr_for_export,
-            fmea_rows=fmea_df.to_dict(orient="records")
+            fmea_rows=fmea_df.to_dict(orient="records"),
         )
 
         c1, c2 = st.columns(2)
@@ -1304,7 +1509,7 @@ elif mode == "FMEA Assistant":
                 data=excel_bytes,
                 file_name=f"fmea_export_{dt.datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                key="fa_download_excel"
+                key="fa_download_excel",
             )
         with c2:
             st.download_button(
@@ -1312,8 +1517,9 @@ elif mode == "FMEA Assistant":
                 data=xml_bytes,
                 file_name=f"fmea_export_{dt.datetime.now().strftime('%Y%m%d_%H%M%S')}.xml",
                 mime="application/xml",
-                key="fa_download_xml"
+                key="fa_download_xml",
             )
+
 
 # -----------------------
 # Cases Explorer (browse Supabase cases, view PPR + FMEA; tables only)

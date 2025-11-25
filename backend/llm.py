@@ -1,8 +1,4 @@
 # llm.py
-
-from dotenv import load_dotenv
-load_dotenv()
-
 import os, time, json, requests, re
 from typing import Any, Dict, Tuple, Optional, List
 
@@ -373,7 +369,12 @@ class LLM:
             data = json.loads(content)
         except Exception:
             clean = _sanitize_common(content)
-            data = json.loads(clean)
+            try:
+                data = json.loads(clean)
+            except Exception as e:
+                # Log for debugging and return empty structures instead of crashing
+                print("LLM raw content (failed JSON):", repr(content))
+                raise ValueError(f"LLM did not return valid JSON: {e}")
         fmea_json = data.get("fmea", [])
         ppr_json = data.get("ppr", {"products": [], "processes": [], "resources": []})
         return fmea_json, ppr_json

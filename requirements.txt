@@ -12,4 +12,5 @@ google-auth-oauthlib
 supabase==2.2.1
 fastapi
 xlsxwriter
-httpx[http2]>=0.26,<0.29
+httpx==0.24
+websockets>=13.0
