@@ -9,6 +9,7 @@ streamlit-aggrid
 google-api-python-client
 google-auth
 google-auth-oauthlib
-supabase
+supabase==2.2.1
 fastapi
 xlsxwriter
+httpx[http2]>=0.26,<0.29
