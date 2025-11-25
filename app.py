@@ -11,8 +11,6 @@ import streamlit as st
 import datetime as dt
 #import st_cytoscape  # pip install st-cytoscape
 st.set_page_config(page_title="CBR FMEA Assistant", layout="wide")
-from dotenv import load_dotenv
-load_dotenv()
 from backend.export import to_pretty_excel_bytes, to_structured_xml_bytes
 from supabase import create_client, Client
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
@@ -93,14 +91,14 @@ embedder = get_embedder()
 
 
 def _build_supabase() -> Client:
-    url = os.getenv("SUPABASE_URL")
-    key = os.getenv("SUPABASE_ANON_KEY")
+    url = st.secrets("SUPABASE_URL")
+    key = st.secrets("SUPABASE_ANON_KEY")
     if not url or not key:
         raise RuntimeError("Missing SUPABASE_URL or SUPABASE_ANON_KEY")
     return create_client(url, key)
 
 def _supabase_bucket_name() -> str:
-    return os.getenv("SUPABASE_BUCKET", "kb-files")
+    return st.secrets("SUPABASE_BUCKET", "kb-files")
 
 def _guess_mime(filename: str) -> str:
     fn = filename.lower()
@@ -399,7 +397,7 @@ if mode == "Knowledge Base":
     st.title("Knowledge Base Uploader")
     st.markdown("Upload APIS based Excel, review FMEA, type in or optionally generate PPR, then save as a new case.")
 
-    if not os.getenv("SUPABASE_URL") or not os.getenv("SUPABASE_ANON_KEY"):
+    if "SUPABASE_URL" not in st.secrets or "SUPABASE_ANON_KEY" not in st.secrets:
         st.error("SUPABASE_URL or SUPABASE_ANON_KEY not set.")
         st.stop()
 
@@ -1217,7 +1215,7 @@ elif mode == "FMEA Assistant":
                 else:
                     # Successful save: optionally close expander
                     st.session_state["fa_save_expander_open"] = False
-                    if not os.getenv("SUPABASE_URL") or not os.getenv("SUPABASE_ANON_KEY"):
+                    if not st.secrets("SUPABASE_URL") or not st.secrets("SUPABASE_ANON_KEY"):
                         st.error("SUPABASE_URL or SUPABASE_ANON_KEY not set.")
                         st.stop()
 
@@ -1323,7 +1321,7 @@ elif mode == "FMEA Assistant":
 elif mode == "Cases Explorer":
     st.title("Cases Explorer")
 
-    if not os.getenv("SUPABASE_URL") or not os.getenv("SUPABASE_ANON_KEY"):
+    if not st.secrets("SUPABASE_URL") or not st.secrets("SUPABASE_ANON_KEY"):
         st.error("SUPABASE_URL or SUPABASE_ANON_KEY not set.")
         st.stop()
 

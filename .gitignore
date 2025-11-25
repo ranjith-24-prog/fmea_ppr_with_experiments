@@ -104,6 +104,7 @@ Environment and secrets
 .env
 .env.*
 !.env.example
+.streamlit/secrets.toml
 
 # Spyder project settings
 .spyderproject
