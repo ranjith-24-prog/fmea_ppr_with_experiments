@@ -1749,10 +1749,6 @@ elif mode == "FMEA Assistant":
 elif mode == "Cases Explorer":
     st.title("Cases Explorer")
 
-    if not st.secrets("SUPABASE_URL") or not st.secrets("SUPABASE_ANON_KEY"):
-        st.error("SUPABASE_URL or SUPABASE_ANON_KEY not set.")
-        st.stop()
-
     sb = _build_supabase()
 
     # 1) Fetch cases with basic fields
