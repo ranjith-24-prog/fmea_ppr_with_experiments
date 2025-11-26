@@ -13,4 +13,4 @@ supabase==2.2.1
 fastapi
 xlsxwriter
 httpx==0.24
-websockets>=13.0
+websockets
