@@ -28,85 +28,52 @@ def _post_json(url: str, headers: Dict[str, str], payload: Dict[str, Any]) -> Di
 # ---------------------------
 # Each entry defines: type, label, model, env, base_url
 LLM_REGISTRY: Dict[str, Dict[str, str]] = {
-    # 1) Perplexity (current default)
+    # 1) Perplexity (default)
     "perplexity/sonar-pro": {
         "label": "Perplexity Sonar Pro",
         "type": "perplexity",
         "model": "sonar-pro",
         "env": "PERPLEXITY_API_KEY",
-        "base_url": os.getenv("PERPLEXITY_API_URL", "https://api.perplexity.ai")
+        "base_url": os.getenv("PERPLEXITY_API_URL", "https://api.perplexity.ai"),
     },
 
-    # 2) OpenAI GPT-4o family
+    # 2) OpenAI GPT-4o
     "openai/gpt-4o": {
         "label": "OpenAI GPT-4o",
         "type": "openai",
         "model": "gpt-4o",
         "env": "OPENAI_API_KEY",
-        "base_url": "https://api.openai.com/v1/chat/completions"
-    },
-    "openai/gpt-4o-mini": {
-        "label": "OpenAI GPT-4o-mini",
-        "type": "openai",
-        "model": "gpt-4o-mini",
-        "env": "OPENAI_API_KEY",
-        "base_url": "https://api.openai.com/v1/chat/completions"
+        "base_url": "https://api.openai.com/v1/chat/completions",
     },
 
-    # 3) Anthropic Claude 3.5
+    # 3) Anthropic Claude 3.5 Sonnet
     "anthropic/claude-3-5-sonnet": {
         "label": "Anthropic Claude 3.5 Sonnet",
         "type": "anthropic",
         "model": "claude-3-5-sonnet-20240620",
         "env": "ANTHROPIC_API_KEY",
-        "base_url": "https://api.anthropic.com/v1/messages"
+        "base_url": "https://api.anthropic.com/v1/messages",
     },
 
-    # 4) Google Gemini 1.5
+    # 4) Google Gemini 1.5 Pro
     "google/gemini-1.5-pro": {
         "label": "Google Gemini 1.5 Pro",
         "type": "google",
         "model": "gemini-1.5-pro",
         "env": "GOOGLE_API_KEY",
-        "base_url": "https://generativelanguage.googleapis.com/v1beta/models"
+        "base_url": "https://generativelanguage.googleapis.com/v1beta/models",
     },
 
-    # 5) Mistral
+    # 5) Mistral Large
     "mistral/mistral-large": {
         "label": "Mistral Large",
         "type": "mistral",
         "model": "mistral-large-latest",
         "env": "MISTRAL_API_KEY",
-        "base_url": "https://api.mistral.ai/v1/chat/completions"
-    },
-
-    # 6) Llama via Together (open weights)
-    "together/llama-3.1-70b": {
-        "label": "Llama 3.1 70B (Together)",
-        "type": "together",
-        "model": "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",
-        "env": "TOGETHER_API_KEY",
-        "base_url": "https://api.together.xyz/v1/chat/completions"
-    },
-
-    # 7) Cohere
-    "cohere/command-r-plus": {
-        "label": "Cohere Command R+",
-        "type": "cohere",
-        "model": "command-r-plus",
-        "env": "COHERE_API_KEY",
-        "base_url": "https://api.cohere.ai/v1/chat"
-    },
-
-    # Optional: Groq for low-latency open models
-    "groq/llama-3.1-70b": {
-        "label": "Groq Llama 3.1 70B",
-        "type": "groq",
-        "model": "llama-3.1-70b-versatile",
-        "env": "GROQ_API_KEY",
-        "base_url": "https://api.groq.com/openai/v1/chat/completions"
+        "base_url": "https://api.mistral.ai/v1/chat/completions",
     },
 }
+
 
 DEFAULT_MODEL_ID = "perplexity/sonar-pro"
 
@@ -342,19 +309,20 @@ class LLM:
         system = (
             "You are an expert in manufacturing Process FMEA (DIN EN 60812/APIS) and PPR (Product-Process-Resource) categorization.\n"
             "Given a production description, generate EXACTLY one JSON object with keys 'fmea' and 'ppr'.\n"
-            "'fmea' should be an array of FMEA row objects with keys atleast 10 rows:\n"
+            "'fmea' should be an array of FMEA row objects with keys (at least 10 rows):\n"
             "Each FMEA row's 'system_element' must be a process step (e.g., Preparation, Welding, Inspection, Handling, Fixturing, Cleaning, Post-weld Inspection)\n"
-            '["system_element", "function", "potential_failure", "c1", "potential_effect", "s1", "c2", "c3", "potential_cause", "o1", '
-            '"current_preventive_action", "current_detection_action", "d1", "rpn1", "recommended_action", "rd", "action_taken", "s2", "o2", "d2", "rpn2", "notes"]\n'
+            '["system_element", "function", "potential_failure", "c1", "potential_effect", "s1", "c2", "c3", '
+            '"potential_cause", "o1", "current_preventive_action", "current_detection_action", "d1", "rpn1", '
+            '"recommended_action", "rd", "action_taken", "s2", "o2", "d2", "rpn2", "notes"]\n'
             "'ppr' should be an object with keys 'products', 'processes', 'resources', each mapping to a list of strings.\n"
             "Output ONLY the JSON object, no markdown or extra text.\n"
             "Example:\n"
             '{\n'
-            '  "fmea": [ ... FMEA rows ... ],\n'
-            '  "ppr": {\n'
-            '    "products": ["Aluminium profile"],\n'
-            '    "processes": ["Laser welding"],\n'
-            '    "resources": ["Shielding gas"]\n'
+            '  \"fmea\": [ ... FMEA rows ... ],\n'
+            '  \"ppr\": {\n'
+            '    \"products\": [\"Aluminium profile\"],\n'
+            '    \"processes\": [\"Laser welding\"],\n'
+            '    \"resources\": [\"Shielding gas\"]\n'
             '  }\n'
             '}'
         )
@@ -364,20 +332,48 @@ class LLM:
             f"PPR context hints:\n{hint_json}\n"
             "Remember: output exactly one JSON object as described above."
         )
+
         content = self._chat(system, user, temperature=0.2, max_tokens=3200)
+
+        # Debug log to your terminal
+        print("generate_fmea_and_ppr_json: raw LLM content (first 500 chars):")
+        print(repr((content or "")[:500]))
+
+        if not content or not str(content).strip():
+            raise ValueError("LLM did not return any content (empty response).")
+
+        # Primary parse
         try:
             data = json.loads(content)
         except Exception:
+            # Clean obvious noise (control chars etc.)
             clean = _sanitize_common(content)
+
+            # Try direct parse on cleaned text
             try:
                 data = json.loads(clean)
-            except Exception as e:
-                # Log for debugging and return empty structures instead of crashing
-                print("LLM raw content (failed JSON):", repr(content))
-                raise ValueError(f"LLM did not return valid JSON: {e}")
+            except Exception:
+                # As a fallback, try to extract the first JSON object from the text
+                text = clean.strip()
+                start = text.find("{")
+                end = text.rfind("}")
+                if start != -1 and end != -1 and end > start:
+                    candidate = text[start : end + 1]
+                    try:
+                        data = json.loads(candidate)
+                    except Exception as e2:
+                        print("LLM raw content (failed JSON candidate):", repr(candidate))
+                        raise ValueError(f"LLM did not return valid JSON: {e2}")
+                else:
+                    print("LLM raw content (failed JSON, no braces found):", repr(clean))
+                    raise ValueError(
+                        "LLM did not return valid JSON: no JSON object could be extracted."
+                    )
+
         fmea_json = data.get("fmea", [])
         ppr_json = data.get("ppr", {"products": [], "processes": [], "resources": []})
         return fmea_json, ppr_json
+
 
     def generate_fmea_rows_json(self, context_text: str, ppr_hint: dict) -> list:
         fmea_rows, _ = self.generate_fmea_and_ppr_json(context_text, ppr_hint)
