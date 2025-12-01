@@ -87,7 +87,7 @@ embedder = get_embedder()
 def _get_secret(name: str, default: str | None = None) -> str | None:
     # Try st.secrets first (Streamlit), then fall back to environment variables for local use
     if name in st.secrets:
-        return st.secrets[name]
+        return st.secrets["api_keys"][name]
     return os.getenv(name, default)
 
 def _build_supabase() -> Client:
