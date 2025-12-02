@@ -341,6 +341,44 @@ st.markdown(
         background-color: transparent !important;
     }
 
+    /* ---- FIX: Case title input pill ---- */
+    /* Remove extra inner white band */
+    .stTextInput:has(input[placeholder^="e.g., Ultrasonic welding of battery tray v1"]) > div > div {
+        background-color: transparent !important;
+        padding: 0 !important;
+        border-radius: 999px !important;
+        box-shadow: none !important;
+    }
+    
+    .stTextInput:has(input[placeholder^="e.g., Ultrasonic welding of battery tray v1"]) input {
+        border: 1px solid #d4d4d8 !important;
+        border-radius: 999px !important;
+        background-color: #f9fafb !important;
+        padding: 0.6rem 1rem !important;
+    }
+    
+    /* ---- FIX: Select LLM pill ---- */
+    /* Outer pill container */
+    .stSelectbox > div[data-baseweb="select"] {
+        border-radius: 999px !important;
+        border: 1px solid #0f766e !important;
+        background: linear-gradient(135deg, #eef2ff, #f9fafb) !important;
+        padding: 0 !important;
+    }
+    
+    /* Inner combobox (removes white band) */
+    .stSelectbox > div[data-baseweb="select"] div[role="combobox"] {
+        margin: 2px !important;
+        padding: 6px 12px !important;
+        border-radius: 999px !important;
+        background-color: transparent !important;
+        box-shadow: none !important;
+    }
+    
+    .stSelectbox > div[data-baseweb="select"] div[role="combobox"] > div {
+        background-color: transparent !important;
+        border-radius: 999px !important;
+    }
 
 
 
