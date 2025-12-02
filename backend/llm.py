@@ -335,7 +335,7 @@ class LLM:
             "Remember: output exactly one JSON object as described above."
         )
 
-                content = self._chat(system, user, temperature=0.2, max_tokens=3200)
+        content = self._chat(system, user, temperature=0.2, max_tokens=3200)
 
         # Debug log to your terminal
         print("generate_fmea_and_ppr_json: raw LLM content (first 500 chars):")
