@@ -315,6 +315,8 @@ class LLM:
             '"potential_cause", "o1", "current_preventive_action", "current_detection_action", "d1", "rpn1", '
             '"recommended_action", "rd", "action_taken", "s2", "o2", "d2", "rpn2", "notes"]\n'
             "'ppr' should be an object with keys 'products', 'processes', 'resources', each mapping to a list of strings.\n"
+            "Always return at least 10 FMEA rows derived from the production scenario, "
+            "even if similar rows already appear in the KB_rows context.\n"
             "Output ONLY the JSON object, no markdown or extra text.\n"
             "Example:\n"
             '{\n'
