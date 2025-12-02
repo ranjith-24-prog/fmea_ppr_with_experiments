@@ -445,10 +445,11 @@ class LLM:
 
     def generate_fmea_rows_json(self, context_text: str, ppr_hint: dict) -> list:
         """
-        Generate FMEA rows. The model may return:
-        - a JSON array [...] (possibly wrapped in ```json fences), or
-        - an object {"fmea":[...], "ppr":{...}}.
-        This helper normalizes both and returns only the FMEA rows.
+        Generate FMEA rows from the given context.
+        The model may return:
+        - a JSON object with key 'fmea', or
+        - a bare JSON array of row objects (possibly wrapped in ```json fences).
+        This helper normalizes and returns only the FMEA rows.
         """
         system = (
             "You are an expert in manufacturing Process FMEA (DIN EN 60812/APIS).\n"
@@ -480,20 +481,19 @@ class LLM:
         if not content or not str(content).strip():
             return []
 
-        txt = content.strip()
+        txt = str(content).strip()
 
-        # Strip markdown fences like ```json ... ```
-        if txt.startswith("```"):
-            # drop first ```
+        # Strip markdown fences like `````` if present
+        if txt.startswith("```
+            # remove first line (``` or ```
             first_nl = txt.find("\n")
             if first_nl != -1:
                 txt = txt[first_nl + 1 :]
-            # drop trailing ```
+            # remove trailing ```
             if txt.strip().endswith("```
                 txt = txt[: txt.rfind("```")].strip()
 
-
-        # Primary parse
+        # Try to parse as JSON
         try:
             data = json.loads(txt)
         except Exception:
@@ -517,7 +517,7 @@ class LLM:
                 except Exception:
                     return []
 
-        # Normalize possible shapes
+        # Normalize shapes
         if isinstance(data, dict) and "fmea" in data:
             rows = data.get("fmea", [])
         elif isinstance(data, list):
@@ -527,9 +527,6 @@ class LLM:
 
         print("DEBUG generate_fmea_rows_json normalized rows:", len(rows))
         return rows if isinstance(rows, list) else []
-
-
-
 
 
     def normalize_label(self, text: str) -> str:
