@@ -722,43 +722,36 @@ def _select_kb_rows(sb: Client, embedder: Embeddings, query_ppr: dict, top_cases
             r.pop(k, None)
     return picked
 
-def _complete_missing_with_llm(
-    kb_rows: list[dict],
-    query_ppr: dict,
-    llm: LLM,
-) -> list[dict]:
-    """
-    Ask the LLM only for extra FMEA rows (no PPR),
-    based on KB rows + derived PPR from the description.
-    Returned rows are tagged with _provenance='llm'.
-    """
-    import json
-
+def _complete_missing_with_llm(kb_rows: list[dict], query_ppr: dict, llm: LLM) -> list[dict]:
     prompt = {
         "instruction": (
-            "Given the user PPR description and the retrieved KB FMEA rows, "
-            "propose ADDITIONAL FMEA rows that fill coverage gaps. "
-            "Avoid duplicates of the KB rows. Use this exact schema for each row: "
-            "system_element,function,potential_failure,c1,"
-            "potential_effect,s1,c2,c3,"
-            "potential_cause,o1,current_preventive_action,"
-            "current_detection_action,d1,rpn1,"
-            "recommended_action,rd,action_taken,"
-            "s2,o2,d2,rpn2,notes."
+            "Given the user PPR and relevant KB FMEA rows, propose additional FMEA rows ONLY for gaps. "
+            "Avoid duplicates. Use EXACT schema keys."
         ),
-        "query_ppr": query_ppr,
+        "ppr": query_ppr,
         "kb_rows": kb_rows,
+        "schema": [
+            "system_element","function","potential_failure","c1",
+            "potential_effect","s1","c2","c3",
+            "potential_cause","o1","current_preventive_action",
+            "current_detection_action","d1","rpn1",
+            "recommended_action","rd","action_taken",
+            "s2","o2","d2","rpn2","notes"
+        ],
     }
 
     try:
-        ctx = json.dumps(prompt, ensure_ascii=False)
-        gen_rows = llm.generate_fmea_rows_json(context_text=ctx, ppr_hint=query_ppr)
-
-        # DEBUG – show what came back
-        print("DEBUG FMEA rows from LLM:", type(gen_rows), len(gen_rows) if isinstance(gen_rows, list) else "n/a")
-        st.write("DEBUG FMEA rows from LLM (len):", len(gen_rows) if isinstance(gen_rows, list) else "not-a-list")
+        rows_json = json.dumps(prompt, ensure_ascii=False)
+        gen_rows, _ = llm.generate_fmea_and_ppr_json(context_text=rows_json, ppr_hint=None)
+        out = []
+        if isinstance(gen_rows, list):
+            for r in gen_rows:
+                r["_provenance"] = "llm"
+                out.append(r)
+        return out
     except Exception:
         return []
+
 
 
     out: list[dict] = []
