@@ -721,10 +721,14 @@ def _complete_missing_with_llm(
 
     try:
         ctx = json.dumps(prompt, ensure_ascii=False)
-        # FMEA‑only call (uses your existing generate_fmea_rows_json)
         gen_rows = llm.generate_fmea_rows_json(context_text=ctx, ppr_hint=query_ppr)
+
+        # DEBUG – show what came back
+        print("DEBUG FMEA rows from LLM:", type(gen_rows), len(gen_rows) if isinstance(gen_rows, list) else "n/a")
+        st.write("DEBUG FMEA rows from LLM (len):", len(gen_rows) if isinstance(gen_rows, list) else "not-a-list")
     except Exception:
         return []
+
 
     out: list[dict] = []
     if isinstance(gen_rows, list):
