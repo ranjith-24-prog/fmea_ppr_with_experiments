@@ -736,31 +736,24 @@ def _complete_missing_with_llm(kb_rows: list[dict], query_ppr: dict, llm: LLM) -
             "potential_cause","o1","current_preventive_action",
             "current_detection_action","d1","rpn1",
             "recommended_action","rd","action_taken",
-            "s2","o2","d2","rpn2","notes"
+            "s2","o2","d2","rpn2","notes",
         ],
     }
 
     try:
         rows_json = json.dumps(prompt, ensure_ascii=False)
         gen_rows, _ = llm.generate_fmea_and_ppr_json(context_text=rows_json, ppr_hint=None)
+        print("DEBUG LLM FMEA rows type/len:", type(gen_rows), len(gen_rows) if isinstance(gen_rows, list) else "n/a")
         out = []
         if isinstance(gen_rows, list):
             for r in gen_rows:
                 r["_provenance"] = "llm"
                 out.append(r)
         return out
-    except Exception:
+    except Exception as e:
+        print("DEBUG _complete_missing_with_llm error:", repr(e))
         return []
 
-
-
-    out: list[dict] = []
-    if isinstance(gen_rows, list):
-        for r in gen_rows:
-            row = dict(r)
-            row["_provenance"] = "llm"
-            out.append(row)
-    return out
 
 
 def _normalize_numeric_and_rpn(rows: list[dict]) -> list[dict]:
