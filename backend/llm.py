@@ -446,47 +446,68 @@ class LLM:
     def generate_fmea_rows_json(self, context_text: str, ppr_hint: dict) -> list:
         """
         Generate ONLY FMEA rows from the given context.
-        The LLM must return a JSON ARRAY of row objects, no wrapper.
+        The LLM must return a JSON ARRAY of row objects.
         PPR is completely ignored here.
         """
         system = (
             "You are an expert in manufacturing Process FMEA (DIN EN 60812/APIS).\n"
-            "From the provided context, you must propose additional FMEA rows.\n"
-            "Output ONLY a JSON ARRAY (no outer object) where each element is one FMEA row.\n"
-            "Use EXACTLY these keys for every row:\n"
-            "system_element,function,potential_failure,c1,"
-            "potential_effect,s1,c2,c3,"
-            "potential_cause,o1,current_preventive_action,"
-            "current_detection_action,d1,rpn1,"
-            "recommended_action,rd,action_taken,"
-            "s2,o2,d2,rpn2,notes.\n"
-            "Do not output any PPR or other keys."
+            "From the provided CONTEXT, you must propose additional FMEA rows that cover the process steps, "
+            "their functions, potential failures, effects, causes, current controls, and recommended actions.\n"
+            "VERY IMPORTANT:\n"
+            "  • Output ONLY a JSON ARRAY (no outer object) where each element is one FMEA row.\n"
+            "  • Each row MUST use EXACTLY these keys:\n"
+            "    system_element,function,potential_failure,c1,"
+            "    potential_effect,s1,c2,c3,"
+            "    potential_cause,o1,current_preventive_action,"
+            "    current_detection_action,d1,rpn1,"
+            "    recommended_action,rd,action_taken,"
+            "    s2,o2,d2,rpn2,notes.\n"
+            "  • Return AT LEAST 8 rows when enough information is present.\n"
+            "Do NOT output any PPR keys or any text outside the JSON array."
         )
         user = (
-            "Context (may be JSON with KB FMEA rows and a PPR description):\n"
+            "CONTEXT (JSON with KB FMEA rows and a PPR-like description):\n"
             f"{context_text}\n\n"
             "Now return ONLY the JSON ARRAY of FMEA rows as specified."
         )
 
         content = self._chat(system, user, temperature=0.2, max_tokens=3200)
+        print("DEBUG generate_fmea_rows_json raw (first 400):", repr((content or "")[:400]))
 
         if not content or not str(content).strip():
             return []
 
-        # Parse as JSON array, with a small fallback
+        # Try direct parse first
         try:
             data = json.loads(content)
         except Exception:
             clean = _sanitize_common(content)
             text = clean.strip()
-            start = text.find("[")
-            end = text.rfind("]")
-            if start == -1 or end <= start:
-                return []
-            candidate = text[start : end + 1]
-            data = json.loads(candidate)
+            # If model wrapped array in an object like {"fmea":[...]}
+            try:
+                obj = json.loads(text)
+                if isinstance(obj, dict) and "fmea" in obj:
+                    data = obj["fmea"]
+                else:
+                    data = obj
+            except Exception:
+                # Last fallback: extract the first [...] block
+                start = text.find("[")
+                end = text.rfind("]")
+                if start == -1 or end <= start:
+                    return []
+                candidate = text[start : end + 1]
+                try:
+                    data = json.loads(candidate)
+                except Exception:
+                    return []
+
+        # If still an object with 'fmea', unwrap once more
+        if isinstance(data, dict) and "fmea" in data:
+            data = data.get("fmea", [])
 
         return data if isinstance(data, list) else []
+
 
 
     def normalize_label(self, text: str) -> str:
