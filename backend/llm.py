@@ -445,24 +445,88 @@ class LLM:
 
     def generate_fmea_rows_json(self, context_text: str, ppr_hint: dict) -> list:
         """
-        Generate FMEA rows using the combined FMEA+PPR JSON helper,
-        and return ONLY the FMEA rows. If none are present, return [].
+        Generate FMEA rows. The model may return:
+        - a JSON array [...] (possibly wrapped in ```json fences), or
+        - an object {"fmea":[...], "ppr":{...}}.
+        This helper normalizes both and returns only the FMEA rows.
         """
+        system = (
+            "You are an expert in manufacturing Process FMEA (DIN EN 60812/APIS).\n"
+            "From the provided CONTEXT, propose additional FMEA rows that cover the process steps, "
+            "their functions, potential failures, effects, causes, current controls, and recommended actions.\n"
+            "You may output EITHER:\n"
+            "  (A) a JSON object with key 'fmea' (array of rows) and optional 'ppr', OR\n"
+            "  (B) directly a JSON ARRAY of FMEA rows.\n"
+            "Each row must use EXACTLY these keys:\n"
+            "system_element,function,potential_failure,c1,"
+            "potential_effect,s1,c2,c3,"
+            "potential_cause,o1,current_preventive_action,"
+            "current_detection_action,d1,rpn1,"
+            "recommended_action,rd,action_taken,"
+            "s2,o2,d2,rpn2,notes.\n"
+        )
+        user = (
+            "CONTEXT (JSON with KB FMEA rows and a PPR-like description):\n"
+            f"{context_text}\n\n"
+            "Now return either:\n"
+            "  {\"fmea\": [ ... rows ... ], \"ppr\": {...}}\n"
+            "or just:\n"
+            "  [ ... rows ... ]"
+        )
+
+        content = self._chat(system, user, temperature=0.2, max_tokens=3200)
+        print("DEBUG generate_fmea_rows_json raw (first 400):", repr((content or "")[:400]))
+
+        if not content or not str(content).strip():
+            return []
+
+        txt = content.strip()
+
+        # Strip markdown fences like ``````
+        if txt.startswith("```
+            # drop first ```... line
+            first_nl = txt.find("\n")
+            if first_nl != -1:
+                txt = txt[first_nl + 1 :]
+            # drop trailing ```
+            if txt.strip().endswith("```"):
+                txt = txt[: txt.rfind("```
+
+        # Primary parse
         try:
-            fmea_rows, _ = self.generate_fmea_and_ppr_json(
-                context_text=context_text,
-                ppr_hint=ppr_hint,
-            )
-        except Exception as e:
-            print("DEBUG generate_fmea_rows_json error:", repr(e))
-            return []
+            data = json.loads(txt)
+        except Exception:
+            clean = _sanitize_common(txt)
+            try:
+                data = json.loads(clean)
+            except Exception:
+                # Fallback: extract first {...} or [...] block
+                s_obj = clean.find("{")
+                e_obj = clean.rfind("}")
+                s_arr = clean.find("[")
+                e_arr = clean.rfind("]")
+                if s_obj != -1 and e_obj > s_obj:
+                    candidate = clean[s_obj : e_obj + 1]
+                elif s_arr != -1 and e_arr > s_arr:
+                    candidate = clean[s_arr : e_arr + 1]
+                else:
+                    return []
+                try:
+                    data = json.loads(candidate)
+                except Exception:
+                    return []
 
-        if not isinstance(fmea_rows, list):
-            print("DEBUG generate_fmea_rows_json: fmea_rows not a list:", type(fmea_rows))
-            return []
+        # Normalize possible shapes
+        if isinstance(data, dict) and "fmea" in data:
+            rows = data.get("fmea", [])
+        elif isinstance(data, list):
+            rows = data
+        else:
+            rows = []
 
-        print("DEBUG generate_fmea_rows_json: got", len(fmea_rows), "rows from LLM")
-        return fmea_rows
+        print("DEBUG generate_fmea_rows_json normalized rows:", len(rows))
+        return rows if isinstance(rows, list) else []
+
 
 
 
