@@ -942,7 +942,6 @@ with tab_kb:
                             "You are a manufacturing PPR extraction assistant. "
                             "From the user description and the sample rows, produce four lists only: "
                             "input_products, products (outputs), processes, resources. "
-                            "Extract four lists only: input_products, products (outputs), processes, resources. "
                             "Treat Input Products as consumables and base materials fed into the process "
                             "(e.g., aluminium extrusions/profiles, sheets/plates, filler wire/rod ER4043, "
                             "shielding gas argon/CO2, adhesives/primers, fasteners). "
@@ -956,11 +955,12 @@ with tab_kb:
                     }
                     payload = json.dumps(prompt, ensure_ascii=False)
 
-                    _rows, ppr = llm_kb.generate_fmea_and_ppr_json(
-                        context_text=payload, ppr_hint=None
+                    # PPR-only LLM call
+                    ppr = llm_kb.generate_ppr_from_text(
+                        context_text=payload,
+                        ppr_hint=None,
                     )
 
-                    # Normalize and keep
                     st.session_state["parsed_ppr"] = _normalize_ppr_safe(
                         ppr if isinstance(ppr, dict) else {}
                     )
@@ -1497,12 +1497,15 @@ with tab_fmea:
             )
 
         try:
-            _rows, ppr = llm.generate_fmea_and_ppr_json(
-                context_text=payload, ppr_hint=None
+            # PPR-only call (no FMEA generation here)
+            ppr = llm.generate_ppr_from_text(
+                context_text=payload,
+                ppr_hint=None,
             )
         except Exception as e:
-            st.error(f"LLM call failed: {e}")
+            st.error(f"PPR LLM call failed: {e}")
             return {}
+
 
         with st.expander("Raw LLM return (repr)", expanded=False):
             try:
