@@ -482,15 +482,16 @@ class LLM:
 
         txt = content.strip()
 
-        # Strip markdown fences like ``````
-        if txt.startswith("```
-            # drop first ```... line
+        # Strip markdown fences like ```json ... ```
+        if txt.startswith("```"):
+            # drop first ```
             first_nl = txt.find("\n")
             if first_nl != -1:
                 txt = txt[first_nl + 1 :]
             # drop trailing ```
-            if txt.strip().endswith("```"):
-                txt = txt[: txt.rfind("```
+            if txt.strip().endswith("```
+                txt = txt[: txt.rfind("```")].strip()
+
 
         # Primary parse
         try:
