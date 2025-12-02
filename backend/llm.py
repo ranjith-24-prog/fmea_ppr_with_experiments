@@ -443,9 +443,51 @@ class LLM:
             }
             return ppr
 
-    def generate_fmea_rows_json(self, context_text: str, ppr_hint: dict) -> list:
-        fmea_rows, _ = self.generate_fmea_and_ppr_json(context_text, ppr_hint)
-        return fmea_rows
+        def generate_fmea_rows_json(self, context_text: str, ppr_hint: dict) -> list:
+            """
+            Generate ONLY FMEA rows from the given context.
+            The LLM must return a JSON ARRAY of row objects, no wrapper.
+            PPR is completely ignored here.
+            """
+            system = (
+                "You are an expert in manufacturing Process FMEA (DIN EN 60812/APIS).\n"
+                "From the provided context, you must propose additional FMEA rows.\n"
+                "Output ONLY a JSON ARRAY (no outer object) where each element is one FMEA row.\n"
+                "Use EXACTLY these keys for every row:\n"
+                "system_element,function,potential_failure,c1,"
+                "potential_effect,s1,c2,c3,"
+                "potential_cause,o1,current_preventive_action,"
+                "current_detection_action,d1,rpn1,"
+                "recommended_action,rd,action_taken,"
+                "s2,o2,d2,rpn2,notes.\n"
+                "Do not output any PPR or other keys."
+            )
+            user = (
+                "Context (may be JSON with KB FMEA rows and a PPR description):\n"
+                f"{context_text}\n\n"
+                "Now return ONLY the JSON ARRAY of FMEA rows as specified."
+            )
+    
+            content = self._chat(system, user, temperature=0.2, max_tokens=3200)
+    
+            if not content or not str(content).strip():
+                return []
+    
+            # Parse as JSON array, with a small fallback
+            try:
+                data = json.loads(content)
+            except Exception:
+                clean = _sanitize_common(content)
+                text = clean.strip()
+                start = text.find("[")
+                end = text.rfind("]")
+                if start == -1 or end <= start:
+                    return []
+                candidate = text[start : end + 1]
+                data = json.loads(candidate)
+    
+            return data if isinstance(data, list) else []
+
 
     def normalize_label(self, text: str) -> str:
         return " ".join((text or "").strip().split())
