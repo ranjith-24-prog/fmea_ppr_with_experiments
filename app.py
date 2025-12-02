@@ -278,26 +278,69 @@ st.markdown(
     border-radius: 999px !important;
     }
 
-    /* Tighten inner select control so pill has no white band */
+    /* ---------- TIGHT PILL / CARD FOR INPUTS & SELECTS ---------- */
+
+    /* Text inputs (Case title, etc.) – remove inner white band */
+    .stTextInput > div > div {
+        border-radius: 999px !important;
+        background-color: transparent !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+    }
+    
+    .stTextInput input {
+        border: 1px solid #d4d4d8 !important;
+        border-radius: 999px !important;
+        background-color: #f9fafb !important;
+        padding: 0.6rem 1rem !important;
+        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
+        font-size: 0.95rem;
+    }
+    
+    /* Textareas (description, PPR fields) – remove outer white frame */
+    .stTextArea > div {
+        border-radius: 14px !important;
+        background-color: transparent !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+    }
+    
+    .stTextArea textarea {
+        border: 1px solid #d4d4d8 !important;
+        border-radius: 14px !important;
+        background-color: #f9fafb !important;
+        padding: 0.9rem 1rem !important;
+        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
+        font-size: 0.95rem;
+    }
+    
+    /* Select LLM – remove inner white band & tighten control */
+    .stSelectbox > div[data-baseweb="select"] {
+        border-radius: 999px !important;
+        border: 1px solid #d4d4d8 !important;
+        background: linear-gradient(135deg, #eef2ff, #f9fafb) !important;
+        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+        padding: 2px 8px !important;
+    }
+    
     .stSelectbox > div[data-baseweb="select"] div[role="combobox"] {
         margin: 0 !important;
-        padding: 4px 10px !important;        /* reduce vertical padding */
+        padding: 4px 10px !important;
         border-radius: 999px !important;
         background-color: transparent !important;
         box-shadow: none !important;
     }
     
-    /* Ensure the displayed value and icon sit inside the pill, not in a white block */
     .stSelectbox > div[data-baseweb="select"] div[role="combobox"] > div {
         background-color: transparent !important;
         border-radius: 999px !important;
     }
     
-    /* Remove any residual white background around the label text */
     .stSelectbox [data-testid="stMarkdownContainer"] p {
         margin: 0 !important;
         background-color: transparent !important;
     }
+
 
 
 
