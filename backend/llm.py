@@ -335,7 +335,7 @@ class LLM:
             "Remember: output exactly one JSON object as described above."
         )
 
-        content = self._chat(system, user, temperature=0.2, max_tokens=3200)
+                content = self._chat(system, user, temperature=0.2, max_tokens=3200)
 
         # Debug log to your terminal
         print("generate_fmea_and_ppr_json: raw LLM content (first 500 chars):")
@@ -344,15 +344,15 @@ class LLM:
         if not content or not str(content).strip():
             raise ValueError("LLM did not return any content (empty response).")
 
-        # --- NEW: strip ```
+        # --- Strip ```json fences if present ---
         txt = str(content).strip()
-        if txt.startswith("```"):
+        if txt.startswith("```
             first_nl = txt.find("\n")
             if first_nl != -1:
                 txt = txt[first_nl + 1 :]
-            if txt.strip().endswith("```
-                txt = txt[: txt.rfind("```")].strip()
-        # -------------------------------------------
+            if txt.strip().endswith("```"):
+                txt = txt[: txt.rfind("```
+        # ---------------------------------------
 
         # Primary parse
         try:
