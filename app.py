@@ -26,52 +26,281 @@ from backend.backend_fmea_pipeline import (
 )
 
 
-st.markdown("""
-<style>
-/* Buttons in red */
-div.stButton > button {
-    background-color: #D32F2F !important;
-    color: #fff !important;
-    font-weight: 600;
-    border: none;
-    border-radius: 6px;
-    font-family: 'Segoe UI', 'Arial', sans-serif;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.04);
-    padding: 8px 18px;
-    margin: 8px 0px;
-}
+# ---------- Global styling ----------
+st.markdown(
+    """
+    <style>
+    /* Global page background and content width */
+    .stApp {
+        background: radial-gradient(circle at top left, #e0f2fe 0, #f4f3ed 55%, #e5e7eb 100%);
+    }
+    .main .block-container {
+        max-width: 1200px;
+        padding-top: 2rem;
+        padding-bottom: 3rem;
+    }
 
-/* AgGrid header styling */
-.ag-theme-alpine .ag-header {
-    background-color: #FFCDD2 !important;
-}
-.ag-theme-alpine .ag-header-cell {
-    background-color: #FFCDD2 !important;
-    color: #D32F2F !important;
-    font-family: 'Segoe UI', 'Arial', sans-serif !important;
-    font-size: 16px !important;
-    font-weight: bold !important;
-    border-bottom: 2px solid #D32F2F;
-}
-.ag-theme-alpine .ag-header-cell-label {
-    color: #D32F2F !important;
-    font-family: 'Segoe UI', 'Arial', sans-serif !important;
-    font-size: 16px !important;
-    font-weight: bold !important;
-}
+    /* Typography */
+    body, h1, h2, h3, h4, h5, h6, p {
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: #111827;
+    }
+    h1 {
+        font-size: 2rem;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        margin-bottom: 0.5rem;
+    }
+    h2 {
+        margin-top: 1.5rem;
+        margin-bottom: 0.5rem;
+    }
 
-body, h1, h2, h3, h4, h5, h6, p {
-    font-family: 'Segoe UI', 'Arial', sans-serif;
+        /* Primary buttons (Generate FMEA, etc.) */
+    .stButton > button {
+        background: linear-gradient(135deg, #0f766e, #22c55e);  /* teal/green */
+        color: #ffffff;
+        border: none;
+        border-radius: 999px;
+        padding: 0.45rem 1.3rem;
+        font-weight: 600;
+        font-size: 0.92rem;
+        box-shadow: 0 6px 18px rgba(15, 118, 110, 0.35);
+        cursor: pointer;
+        transition: background-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .stButton > button:hover {
+        filter: brightness(1.06);
+        transform: translateY(-1px);
+        box-shadow: 0 10px 24px rgba(15, 118, 110, 0.45);
+    }
+
+    /* Make sure primary and secondary kinds both use our colors, not plain white */
+    .stButton > button[kind="primary"],
+    .stButton > button[data-testid="baseButton-primary"] {
+        background: linear-gradient(135deg, #0f766e, #22c55e);
+        color: #ffffff;
+    }
+    .stButton > button[kind="primary"]:hover,
+    .stButton > button[data-testid="baseButton-primary"]:hover {
+        filter: brightness(1.06);
+    }
+
+    .stButton > button[kind="secondary"],
+    .stButton > button[data-testid="baseButton-secondary"] {
+        background: #e5f2ff;              /* light tint to avoid plain white */
+        color: #0f172a;
+        border-radius: 999px;
+        border: 1px solid #cbd5f5;
+        box-shadow: none;
+    }
+    .stButton > button[kind="secondary"]:hover,
+    .stButton > button[data-testid="baseButton-secondary"]:hover {
+        background: #dbeafe;
+        border-color: #0f766e;
+    }
+
+    /* Card-like containers (unchanged) */
+    .block-container > div {
+        border-radius: 16px;
+    }
+
+    /* Tabs: spacing from top + bold labels so they read clearly as tabs */
+    [data-testid="stTabs"] {
+        margin-top: 1.5rem;      /* space below Streamlit header bar */
+        margin-bottom: 1.5rem;
+    }
+    [data-testid="stTabs"] button[role="tab"] {
+        font-weight: 700;        /* bold tab labels */
+        padding-top: 0.6rem;
+        padding-bottom: 0.6rem;
+    }
+
+        /* Make tab labels bold (including emojis) */
+    .stTabs [data-baseweb="tab-list"] button [data-testid="stMarkdownContainer"] p {
+        font-weight: 700 !important;
+    }
+
+    /* Optional: slightly darker color for the active tab */
+    .stTabs [data-baseweb="tab-list"] button[aria-selected="true"]
+        [data-testid="stMarkdownContainer"] p {
+        color: #0f172a;
+    }
+
+
+    /* AG-Grid refinements (as before) */
+    .ag-theme-alpine .ag-header {
+        background-color: #0f172a !important;
+    }
+    .ag-theme-alpine .ag-header-cell,
+    .ag-theme-alpine .ag-header-cell-label {
+        color: #f9fafb !important;
+        font-weight: 600 !important;
+        font-size: 14px !important;
+    }
+    .ag-theme-alpine .ag-cell {
+        font-size: 14px !important;
+        white-space: nowrap;       /* single line only */
+        overflow: hidden;          /* hide overflow if any */
+        text-overflow: ellipsis;   /* show ... if column is still too narrow */
+        font-size: 14px !important;
+    }
+    .ag-theme-alpine .ag-row-hover {
+        background-color: #ecfeff !important;
+    }
+
+        /* Streamlit dataframes (st.dataframe) */
+    [data-testid="stDataFrame"] > div {
+        border-radius: 14px;
+        overflow: hidden;
+        box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+        border: 1px solid #e5e7eb;
+        background-color: #f9fafb;   /* light grey table card */
+    }
+    [data-testid="stDataFrame"] table {
+        font-size: 0.9rem;
+    }
+    [data-testid="stDataFrame"] thead tr {
+        background-color: #0f172a;   /* dark header */
+        color: #f9fafb;
+        font-weight: 600;
+    }
+    [data-testid="stDataFrame"] tbody tr:nth-child(even) {
+        background-color: #f3f4f6;   /* zebra striping */
+    }
+    [data-testid="stDataFrame"] tbody tr:hover {
+        background-color: #e0f2fe;   /* hover row */
+    }
+
+    /* AgGrid overall card and rows */
+    .ag-theme-alpine {
+        border-radius: 14px;
+        border: 1px solid #e5e7eb;
+        overflow: hidden;
+        background-color: #f9fafb;
+        box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+    }
+    .ag-theme-alpine .ag-row:nth-child(even) {
+        background-color: #f3f4f6;
+    }
+    .ag-theme-alpine .ag-row:hover {
+        background-color: #e0f2fe !important;
+    }
+
+        /* Streamlit dataframes (st.dataframe) */
+    div[data-testid="stDataFrame"] > div {
+        border-radius: 14px;
+        overflow: hidden;
+        box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+        border: 1px solid #e5e7eb;
+        background-color: #f9fafb;
+    }
+    div[data-testid="stDataFrame"] table {
+        font-size: 0.9rem;
+    }
+    div[data-testid="stDataFrame"] thead tr {
+        background-color: #0f172a;
+        color: #f9fafb;
+        font-weight: 600;
+    }
+    div[data-testid="stDataFrame"] tbody tr:nth-child(even) {
+        background-color: #f3f4f6;
+    }
+    div[data-testid="stDataFrame"] tbody tr:hover {
+        background-color: #e0f2fe;
+    }
+
+
+    /* Description textarea */
+    .stTextArea textarea {
+        border: 1px solid #d4d4d8 !important;
+        border-radius: 14px !important;
+        background-color: #f9fafb !important;
+        padding: 0.9rem 1rem !important;
+        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
+        font-size: 0.95rem;
+    }
+    .stTextArea textarea:focus-visible {
+        outline: none !important;
+        border: 1px solid #0f766e !important;
+        box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.4);
+        background-color: #ffffff !important;
+    }
+
+        /* Text inputs (Case title, etc.) */
+    .stTextInput input {
+        border: 1px solid #d4d4d8 !important;
+        border-radius: 999px !important;
+        background-color: #f9fafb !important;
+        padding: 0.6rem 1rem !important;
+        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
+        font-size: 0.95rem;
+    }
+    .stTextInput input:focus-visible {
+        outline: none !important;
+        border: 1px solid #0f766e !important;
+        box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.4);
+        background-color: #ffffff !important;
+    }
+
+
+    /* "Select LLM" selectboxes – softer fill, no harsh white */
+    .stSelectbox > div[data-baseweb="select"] {
+        border-radius: 999px !important;
+        border: 1px solid #d4d4d8 !important;
+        background: linear-gradient(135deg, #eef2ff, #f9fafb) !important;
+        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+        padding: 2px 8px;
+    }
+
+    /* Remove any inner white blocks so the whole pill looks consistent */
+    .stSelectbox > div[data-baseweb="select"] > div {
+        background-color: transparent !important;
+    }
+
+    /* Hover / focus accent in your teal theme */
+    .stSelectbox > div[data-baseweb="select"]:hover,
+    .stSelectbox > div[data-baseweb="select"]:focus-within {
+        border-color: #0f766e !important;
+        box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.3);
+    }
+
+
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+# ---------- end styling ----------
+
+AGGRID_CUSTOM_CSS = {
+    # Overall grid background + border
+    ".ag-root-wrapper": {
+        "border-radius": "14px",
+        "border": "1px solid #e5e7eb",
+        "box-shadow": "0 4px 14px rgba(15, 23, 42, 0.06)",
+        "overflow": "hidden",
+        "background-color": "#f9fafb",
+    },
+    # Header row
+    ".ag-header": {
+        "background-color": "#0f172a",
+        "color": "#f9fafb",
+        "font-weight": "600",
+        "font-size": "14px",
+    },
+    ".ag-header-cell-label": {
+        "color": "#f9fafb",
+        "font-weight": "600",
+        "font-size": "14px",
+    },
+    # Body rows: zebra and hover
+    ".ag-row:nth-child(even)": {
+        "background-color": "#f3f4f6",
+    },
+    ".ag-row-hover": {
+        "background-color": "#e0f2fe !important",
+    },
 }
-
-.ag-theme-alpine .ag-cell {
-    font-family: 'Segoe UI', 'Arial', sans-serif !important;
-    font-size: 15px !important;
-}
-</style>
-""", unsafe_allow_html=True)
-
-
 
 # -----------------------
 # Env and helpers
@@ -408,15 +637,16 @@ def _link_case_ppr(sb: Client, case_id: int, table: str, id_field: str, ids: lis
     sb.table(table).upsert(rows, on_conflict=f"case_id,{id_field}").execute()
 
 # -----------------------
-# Sidebar
+# Top navigation via tabs (works on all recent Streamlit versions)
 # -----------------------
-st.sidebar.title("Navigation")
-mode = st.sidebar.radio("Mode", ["FMEA Assistant", "Knowledge Base", "Cases Explorer"])
+tab_fmea, tab_kb, tab_cases = st.tabs(
+    ["🤖 FMEA Assistant", "📚 Knowledge Base", "🗂️ Cases Explorer"]
+)
 
 # -----------------------
 # Knowledge Base (manual PPR; buttons; proper linking)
 # -----------------------
-if mode == "Knowledge Base":
+with tab_kb:
     st.title("Knowledge Base Uploader")
     st.markdown("Upload APIS based Excel, review FMEA, type in or optionally generate PPR, then save as a new case.")
 
@@ -503,6 +733,7 @@ if mode == "Knowledge Base":
             fit_columns_on_grid_load=True,
             height=400,
             theme="ag-theme-alpine",  # <--- add this for consistent styling
+            custom_css=AGGRID_CUSTOM_CSS,
         )
         edited_fmea_df = grid_response["data"]
         st.session_state["parsed_fmea"] = edited_fmea_df.to_dict(orient="records")
@@ -830,7 +1061,7 @@ if mode == "Knowledge Base":
 # -----------------------
 # FMEA Assistant (FMEA first; PPR editor visible after; KB-style PPR gen with input hints)
 # -----------------------
-elif mode == "FMEA Assistant":
+with tab_fmea:
     st.title("Case-based FMEA Assistant")
 
     # Timing slots
@@ -1225,6 +1456,7 @@ elif mode == "FMEA Assistant":
             fit_columns_on_grid_load=True,
             height=420,
             theme="ag-theme-alpine",
+            custom_css=AGGRID_CUSTOM_CSS,
         )
 
         st.markdown(
@@ -1744,7 +1976,7 @@ elif mode == "FMEA Assistant":
 # -----------------------
 # Cases Explorer (browse Supabase cases, view PPR + FMEA; tables only)
 # -----------------------
-elif mode == "Cases Explorer":
+with tab_cases:
     st.title("Cases Explorer")
 
     sb = _build_supabase()
