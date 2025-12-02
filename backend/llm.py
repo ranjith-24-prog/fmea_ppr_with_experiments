@@ -344,22 +344,12 @@ class LLM:
         if not content or not str(content).strip():
             raise ValueError("LLM did not return any content (empty response).")
 
-        # --- Strip ```json fences if present ---
-        txt = str(content).strip()
-        if txt.startswith("```
-            first_nl = txt.find("\n")
-            if first_nl != -1:
-                txt = txt[first_nl + 1 :]
-            if txt.strip().endswith("```"):
-                txt = txt[: txt.rfind("```
-        # ---------------------------------------
-
         # Primary parse
         try:
-            data = json.loads(txt)
+            data = json.loads(content)
         except Exception:
             # Clean obvious noise (control chars etc.)
-            clean = _sanitize_common(txt)
+            clean = _sanitize_common(content)
 
             # Try direct parse on cleaned text
             try:
@@ -382,11 +372,9 @@ class LLM:
                         "LLM did not return valid JSON: no JSON object could be extracted."
                     )
 
-
         fmea_json = data.get("fmea", [])
         ppr_json = data.get("ppr", {"products": [], "processes": [], "resources": []})
         return fmea_json, ppr_json
-
 
     def generate_ppr_from_text(
         self,
