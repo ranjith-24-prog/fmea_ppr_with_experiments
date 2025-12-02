@@ -380,6 +380,22 @@ st.markdown(
         border-radius: 999px !important;
     }
 
+    /* Fix Save-as-test-case title pill (any text_input within that form) */
+    div[data-testid="stForm"] .stTextInput > div > div {
+        background-color: transparent !important;
+        padding: 0 !important;
+        border-radius: 999px !important;
+        box-shadow: none !important;
+    }
+    
+    div[data-testid="stForm"] .stTextInput input {
+        border: 1px solid #d4d4d8 !important;
+        border-radius: 999px !important;
+        background-color: #f9fafb !important;
+        padding: 0.6rem 1rem !important;
+    }
+
+
 
 
     </style>
