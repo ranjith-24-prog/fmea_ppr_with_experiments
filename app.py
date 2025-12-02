@@ -265,6 +265,19 @@ st.markdown(
         box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.3);
     }
 
+    .stSelectbox > div[data-baseweb="select"] > div {
+    border-radius: 999px !important; /* force inner div to pill */
+    }
+    
+    .stSelectbox [data-baseweb="select"] div[role="combobox"] {
+    border-radius: 999px !important;
+    background-color: transparent !important;
+    }
+    
+    .stSelectbox [data-baseweb="tag"] {
+    border-radius: 999px !important;
+    }
+
 
     </style>
     """,
