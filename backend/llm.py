@@ -445,88 +445,48 @@ class LLM:
 
     def generate_fmea_rows_json(self, context_text: str, ppr_hint: dict) -> list:
         """
-        Generate FMEA rows from the given context.
-        The model may return:
-        - a JSON object with key 'fmea', or
-        - a bare JSON array of row objects (possibly wrapped in ```json fences).
-        This helper normalizes and returns only the FMEA rows.
+        Generate ONLY FMEA rows from the given context.
+        The LLM must return a JSON ARRAY of row objects, no wrapper.
+        PPR is completely ignored here.
         """
         system = (
             "You are an expert in manufacturing Process FMEA (DIN EN 60812/APIS).\n"
-            "From the provided CONTEXT, propose additional FMEA rows that cover the process steps, "
-            "their functions, potential failures, effects, causes, current controls, and recommended actions.\n"
-            "You may output EITHER:\n"
-            "  (A) a JSON object with key 'fmea' (array of rows) and optional 'ppr', OR\n"
-            "  (B) directly a JSON ARRAY of FMEA rows.\n"
-            "Each row must use EXACTLY these keys:\n"
+            "From the provided context, you must propose additional FMEA rows.\n"
+            "Output ONLY a JSON ARRAY (no outer object) where each element is one FMEA row.\n"
+            "Use EXACTLY these keys for every row:\n"
             "system_element,function,potential_failure,c1,"
             "potential_effect,s1,c2,c3,"
             "potential_cause,o1,current_preventive_action,"
             "current_detection_action,d1,rpn1,"
             "recommended_action,rd,action_taken,"
             "s2,o2,d2,rpn2,notes.\n"
+            "Do not output any PPR or other keys."
         )
         user = (
-            "CONTEXT (JSON with KB FMEA rows and a PPR-like description):\n"
+            "Context (may be JSON with KB FMEA rows and a PPR description):\n"
             f"{context_text}\n\n"
-            "Now return either:\n"
-            "  {\"fmea\": [ ... rows ... ], \"ppr\": {...}}\n"
-            "or just:\n"
-            "  [ ... rows ... ]"
+            "Now return ONLY the JSON ARRAY of FMEA rows as specified."
         )
 
         content = self._chat(system, user, temperature=0.2, max_tokens=3200)
-        print("DEBUG generate_fmea_rows_json raw (first 400):", repr((content or "")[:400]))
 
         if not content or not str(content).strip():
             return []
 
-        txt = str(content).strip()
-
-        # Strip markdown fences like `````` if present
-        if txt.startswith("```
-            # remove first line (``` or ```
-            first_nl = txt.find("\n")
-            if first_nl != -1:
-                txt = txt[first_nl + 1 :]
-            # remove trailing ```
-            if txt.strip().endswith("```
-                txt = txt[: txt.rfind("```")].strip()
-
-        # Try to parse as JSON
+        # Parse as JSON array, with a small fallback
         try:
-            data = json.loads(txt)
+            data = json.loads(content)
         except Exception:
-            clean = _sanitize_common(txt)
-            try:
-                data = json.loads(clean)
-            except Exception:
-                # Fallback: extract first {...} or [...] block
-                s_obj = clean.find("{")
-                e_obj = clean.rfind("}")
-                s_arr = clean.find("[")
-                e_arr = clean.rfind("]")
-                if s_obj != -1 and e_obj > s_obj:
-                    candidate = clean[s_obj : e_obj + 1]
-                elif s_arr != -1 and e_arr > s_arr:
-                    candidate = clean[s_arr : e_arr + 1]
-                else:
-                    return []
-                try:
-                    data = json.loads(candidate)
-                except Exception:
-                    return []
+            clean = _sanitize_common(content)
+            text = clean.strip()
+            start = text.find("[")
+            end = text.rfind("]")
+            if start == -1 or end <= start:
+                return []
+            candidate = text[start : end + 1]
+            data = json.loads(candidate)
 
-        # Normalize shapes
-        if isinstance(data, dict) and "fmea" in data:
-            rows = data.get("fmea", [])
-        elif isinstance(data, list):
-            rows = data
-        else:
-            rows = []
-
-        print("DEBUG generate_fmea_rows_json normalized rows:", len(rows))
-        return rows if isinstance(rows, list) else []
+        return data if isinstance(data, list) else []
 
 
     def normalize_label(self, text: str) -> str:
