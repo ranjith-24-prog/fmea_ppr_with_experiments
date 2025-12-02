@@ -9,7 +9,8 @@ streamlit-aggrid
 google-api-python-client
 google-auth
 google-auth-oauthlib
-supabase==2.2.1
+supabase==2.0.3
+gotrue==2.8.1
 fastapi
 xlsxwriter
 websockets
