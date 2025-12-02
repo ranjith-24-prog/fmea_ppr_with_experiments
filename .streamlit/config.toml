@@ -1,6 +1,7 @@
 [theme]
-primaryColor = "#D32F2F"           # Red for buttons
-backgroundColor = "#F3F3F3"        # Soft background
-secondaryBackgroundColor = "#FFFFFF"
-textColor = "#212121"              # Deep gray text
-font = "sans serif"                # Clean font
+base = "light"
+primaryColor = "#0f766e"          # teal accent
+backgroundColor = "#f4f3ed"       # soft cream main background
+secondaryBackgroundColor = "#ffffff"
+textColor = "#111827"
+font = "sans serif"
