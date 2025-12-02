@@ -375,118 +375,118 @@ class LLM:
         return fmea_json, ppr_json
 
 
-        def generate_ppr_from_text(
-            self,
-            context_text: str,
-            ppr_hint: dict | None = None,
-        ) -> dict:
-            """
-            PPR-only generation from description + optional context.
-            Expects to return JSON with keys:
-            input_products, products, processes, resources.
-            """
-            system = (
-                "You are an expert in manufacturing PPR (Product-Process-Resource) "
-                "for process FMEA contexts.\n"
-                "Given a production description and optional context (such as sample FMEA rows "
-                "or file metadata), return ONE JSON object with exactly these keys:\n"
-                "  - input_products: list of consumables / base materials fed into the process\n"
-                "  - products: list of output products or workpieces\n"
-                "  - processes: list of manufacturing or inspection processes\n"
-                "  - resources: list of equipment, tools, fixtures, robots, sensors, etc.\n"
-                "Use short, deduplicated strings. Do not include explanations or any other keys."
-            )
-    
-            hint_json = json.dumps(ppr_hint or {}, ensure_ascii=False)
-            user = (
-                "Production description and context (may be JSON):\n"
-                f"{context_text}\n\n"
-                "Existing PPR hints (may be empty):\n"
-                f"{hint_json}\n\n"
-                "Return only one JSON object with keys: "
-                "input_products, products, processes, resources."
-            )
-    
-            content = self._chat(system, user, temperature=0.2, max_tokens=1600)
-    
-            if not content or not str(content).strip():
-                raise ValueError("LLM did not return any content (empty response).")
-    
-            # Robust JSON parsing (same pattern as generate_fmea_and_ppr_json)
-            try:
-                data = json.loads(content)
-            except Exception:
-                clean = _sanitize_common(content)
-                try:
-                    data = json.loads(clean)
-                except Exception:
-                    text = clean.strip()
-                    start = text.find("{")
-                    end = text.rfind("}")
-                    if start != -1 and end != -1 and end > start:
-                        candidate = text[start : end + 1]
-                        data = json.loads(candidate)
-                    else:
-                        raise ValueError(
-                            "LLM did not return valid JSON for PPR-only generation."
-                        )
-    
-            if not isinstance(data, dict):
-                raise ValueError("PPR-only LLM result is not a JSON object.")
-    
-            # Normalize and ensure the four keys exist
-            ppr = {
-                "input_products": data.get("input_products", []) or [],
-                "products": data.get("products", []) or [],
-                "processes": data.get("processes", []) or [],
-                "resources": data.get("resources", []) or [],
-            }
-            return ppr
+    def generate_ppr_from_text(
+        self,
+        context_text: str,
+        ppr_hint: dict | None = None,
+    ) -> dict:
+        """
+        PPR-only generation from description + optional context.
+        Expects to return JSON with keys:
+        input_products, products, processes, resources.
+        """
+        system = (
+            "You are an expert in manufacturing PPR (Product-Process-Resource) "
+            "for process FMEA contexts.\n"
+            "Given a production description and optional context (such as sample FMEA rows "
+            "or file metadata), return ONE JSON object with exactly these keys:\n"
+            "  - input_products: list of consumables / base materials fed into the process\n"
+            "  - products: list of output products or workpieces\n"
+            "  - processes: list of manufacturing or inspection processes\n"
+            "  - resources: list of equipment, tools, fixtures, robots, sensors, etc.\n"
+            "Use short, deduplicated strings. Do not include explanations or any other keys."
+        )
 
-        def generate_fmea_rows_json(self, context_text: str, ppr_hint: dict) -> list:
-            """
-            Generate ONLY FMEA rows from the given context.
-            The LLM must return a JSON ARRAY of row objects, no wrapper.
-            PPR is completely ignored here.
-            """
-            system = (
-                "You are an expert in manufacturing Process FMEA (DIN EN 60812/APIS).\n"
-                "From the provided context, you must propose additional FMEA rows.\n"
-                "Output ONLY a JSON ARRAY (no outer object) where each element is one FMEA row.\n"
-                "Use EXACTLY these keys for every row:\n"
-                "system_element,function,potential_failure,c1,"
-                "potential_effect,s1,c2,c3,"
-                "potential_cause,o1,current_preventive_action,"
-                "current_detection_action,d1,rpn1,"
-                "recommended_action,rd,action_taken,"
-                "s2,o2,d2,rpn2,notes.\n"
-                "Do not output any PPR or other keys."
-            )
-            user = (
-                "Context (may be JSON with KB FMEA rows and a PPR description):\n"
-                f"{context_text}\n\n"
-                "Now return ONLY the JSON ARRAY of FMEA rows as specified."
-            )
-    
-            content = self._chat(system, user, temperature=0.2, max_tokens=3200)
-    
-            if not content or not str(content).strip():
-                return []
-    
-            # Parse as JSON array, with a small fallback
+        hint_json = json.dumps(ppr_hint or {}, ensure_ascii=False)
+        user = (
+            "Production description and context (may be JSON):\n"
+            f"{context_text}\n\n"
+            "Existing PPR hints (may be empty):\n"
+            f"{hint_json}\n\n"
+            "Return only one JSON object with keys: "
+            "input_products, products, processes, resources."
+        )
+
+        content = self._chat(system, user, temperature=0.2, max_tokens=1600)
+
+        if not content or not str(content).strip():
+            raise ValueError("LLM did not return any content (empty response).")
+
+        # Robust JSON parsing (same pattern as generate_fmea_and_ppr_json)
+        try:
+            data = json.loads(content)
+        except Exception:
+            clean = _sanitize_common(content)
             try:
-                data = json.loads(content)
+                data = json.loads(clean)
             except Exception:
-                clean = _sanitize_common(content)
                 text = clean.strip()
-                start = text.find("[")
-                end = text.rfind("]")
-                if start == -1 or end <= start:
-                    return []
-                candidate = text[start : end + 1]
-                data = json.loads(candidate)
-    
-            return data if isinstance(data, list) else []
+                start = text.find("{")
+                end = text.rfind("}")
+                if start != -1 and end != -1 and end > start:
+                    candidate = text[start : end + 1]
+                    data = json.loads(candidate)
+                else:
+                    raise ValueError(
+                        "LLM did not return valid JSON for PPR-only generation."
+                    )
+
+        if not isinstance(data, dict):
+            raise ValueError("PPR-only LLM result is not a JSON object.")
+
+        # Normalize and ensure the four keys exist
+        ppr = {
+            "input_products": data.get("input_products", []) or [],
+            "products": data.get("products", []) or [],
+            "processes": data.get("processes", []) or [],
+            "resources": data.get("resources", []) or [],
+        }
+        return ppr
+
+    def generate_fmea_rows_json(self, context_text: str, ppr_hint: dict) -> list:
+        """
+        Generate ONLY FMEA rows from the given context.
+        The LLM must return a JSON ARRAY of row objects, no wrapper.
+        PPR is completely ignored here.
+        """
+        system = (
+            "You are an expert in manufacturing Process FMEA (DIN EN 60812/APIS).\n"
+            "From the provided context, you must propose additional FMEA rows.\n"
+            "Output ONLY a JSON ARRAY (no outer object) where each element is one FMEA row.\n"
+            "Use EXACTLY these keys for every row:\n"
+            "system_element,function,potential_failure,c1,"
+            "potential_effect,s1,c2,c3,"
+            "potential_cause,o1,current_preventive_action,"
+            "current_detection_action,d1,rpn1,"
+            "recommended_action,rd,action_taken,"
+            "s2,o2,d2,rpn2,notes.\n"
+            "Do not output any PPR or other keys."
+        )
+        user = (
+            "Context (may be JSON with KB FMEA rows and a PPR description):\n"
+            f"{context_text}\n\n"
+            "Now return ONLY the JSON ARRAY of FMEA rows as specified."
+        )
+
+        content = self._chat(system, user, temperature=0.2, max_tokens=3200)
+
+        if not content or not str(content).strip():
+            return []
+
+        # Parse as JSON array, with a small fallback
+        try:
+            data = json.loads(content)
+        except Exception:
+            clean = _sanitize_common(content)
+            text = clean.strip()
+            start = text.find("[")
+            end = text.rfind("]")
+            if start == -1 or end <= start:
+                return []
+            candidate = text[start : end + 1]
+            data = json.loads(candidate)
+
+        return data if isinstance(data, list) else []
 
 
     def normalize_label(self, text: str) -> str:
