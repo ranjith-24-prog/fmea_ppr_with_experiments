@@ -58,17 +58,17 @@ st.markdown(
 
         /* Primary buttons (Generate FMEA, etc.) */
     .stButton > button {
-        background: linear-gradient(135deg, #0f766e, #22c55e);  /* teal/green */
+        background: linear-gradient(135deg, #0f766e, #22c55e);
         color: #ffffff;
         border: none;
-        border-radius: 999px;
+        border-radius: 999px !important; /* ensure pill */
         padding: 0.45rem 1.3rem;
         font-weight: 600;
         font-size: 0.92rem;
         box-shadow: 0 6px 18px rgba(15, 118, 110, 0.35);
         cursor: pointer;
         transition: background-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
-    }
+        }
     .stButton > button:hover {
         filter: brightness(1.06);
         transform: translateY(-1px);
@@ -277,6 +277,28 @@ st.markdown(
     .stSelectbox [data-baseweb="tag"] {
     border-radius: 999px !important;
     }
+
+    /* Tighten inner select control so pill has no white band */
+    .stSelectbox > div[data-baseweb="select"] div[role="combobox"] {
+        margin: 0 !important;
+        padding: 4px 10px !important;        /* reduce vertical padding */
+        border-radius: 999px !important;
+        background-color: transparent !important;
+        box-shadow: none !important;
+    }
+    
+    /* Ensure the displayed value and icon sit inside the pill, not in a white block */
+    .stSelectbox > div[data-baseweb="select"] div[role="combobox"] > div {
+        background-color: transparent !important;
+        border-radius: 999px !important;
+    }
+    
+    /* Remove any residual white background around the label text */
+    .stSelectbox [data-testid="stMarkdownContainer"] p {
+        margin: 0 !important;
+        background-color: transparent !important;
+    }
+
 
 
     </style>
