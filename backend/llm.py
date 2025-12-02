@@ -14,8 +14,8 @@ def _sanitize_common(text: str) -> str:
     text = text.replace("’","'").replace("‘","'")
     text = re.sub(r'[\x00-\x08\x0B-\x0C\x0E-\x1F]', ' ', text)
     text = re.sub(r'//.*', '', text)
-    text = re.sub(r'/\*.*?\*/', '', text, flags=re.S)
-    text = re.sub(r',\s*([}\]])', r'\1', text)
+    text = re.sub(r'/\\*.*?\\*/', '', text, flags=re.S)
+    text = re.sub(r',\\s*([}\\]])', r'\\1', text)
     return text
 
 def _post_json(url: str, headers: Dict[str, str], payload: Dict[str, Any]) -> Dict[str, Any]:
