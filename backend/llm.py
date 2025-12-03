@@ -309,22 +309,19 @@ class LLM:
         system = (
             "You are an expert in manufacturing Process FMEA (DIN EN 60812/APIS) and PPR (Product-Process-Resource) categorization.\n"
             "Given a production description, generate EXACTLY one JSON object with keys 'fmea' and 'ppr'.\n"
-            "'fmea' should be an array of FMEA row objects with keys (at least 10 rows):\n"
+            "'fmea' should be an array of FMEA row objects with keys atleast 10 rows:\n"
             "Each FMEA row's 'system_element' must be a process step (e.g., Preparation, Welding, Inspection, Handling, Fixturing, Cleaning, Post-weld Inspection)\n"
-            '["system_element", "function", "potential_failure", "c1", "potential_effect", "s1", "c2", "c3", '
-            '"potential_cause", "o1", "current_preventive_action", "current_detection_action", "d1", "rpn1", '
-            '"recommended_action", "rd", "action_taken", "s2", "o2", "d2", "rpn2", "notes"]\n'
+            '["system_element", "function", "potential_failure", "c1", "potential_effect", "s1", "c2", "c3", "potential_cause", "o1", '
+            '"current_preventive_action", "current_detection_action", "d1", "rpn1", "recommended_action", "rd", "action_taken", "s2", "o2", "d2", "rpn2", "notes"]\n'
             "'ppr' should be an object with keys 'products', 'processes', 'resources', each mapping to a list of strings.\n"
-            "Always return at least 10 FMEA rows derived from the production scenario, "
-            "even if similar rows already appear in the KB_rows context.\n"
             "Output ONLY the JSON object, no markdown or extra text.\n"
             "Example:\n"
             '{\n'
-            '  \"fmea\": [ ... FMEA rows ... ],\n'
-            '  \"ppr\": {\n'
-            '    \"products\": [\"Aluminium profile\"],\n'
-            '    \"processes\": [\"Laser welding\"],\n'
-            '    \"resources\": [\"Shielding gas\"]\n'
+            '  "fmea": [ ... FMEA rows ... ],\n'
+            '  "ppr": {\n'
+            '    "products": ["Aluminium profile"],\n'
+            '    "processes": ["Laser welding"],\n'
+            '    "resources": ["Shielding gas"]\n'
             '  }\n'
             '}'
         )
@@ -334,49 +331,12 @@ class LLM:
             f"PPR context hints:\n{hint_json}\n"
             "Remember: output exactly one JSON object as described above."
         )
-
         content = self._chat(system, user, temperature=0.2, max_tokens=3200)
-
-        # Debug log to your terminal
-        print("generate_fmea_and_ppr_json: raw LLM content (first 500 chars):")
-        print(repr((content or "")[:500]))
-
-        if not content or not str(content).strip():
-            raise ValueError("LLM did not return any content (empty response).")
-
-        # Prepare text for JSON parsing (strip ```json fences if present)
-        txt = str(content).strip()
-        if txt.startswith("```"):
-            first_nl = txt.find("\n")
-            if first_nl != -1:
-                txt = txt[first_nl + 1 :]
-            if txt.strip().endswith("```"):
-                txt = txt[: txt.rfind("```")].strip()
-
-        # Primary parse
         try:
-            data = json.loads(txt)
+            data = json.loads(content)
         except Exception:
-            clean = _sanitize_common(txt)
-            try:
-                data = json.loads(clean)
-            except Exception:
-                text = clean.strip()
-                start = text.find("{")
-                end = text.rfind("}")
-                if start != -1 and end != -1 and end > start:
-                    candidate = text[start : end + 1]
-                    try:
-                        data = json.loads(candidate)
-                    except Exception as e2:
-                        print("LLM raw content (failed JSON candidate):", repr(candidate))
-                        raise ValueError(f"LLM did not return valid JSON: {e2}")
-                else:
-                    print("LLM raw content (failed JSON, no braces found):", repr(clean))
-                    raise ValueError(
-                        "LLM did not return valid JSON: no JSON object could be extracted."
-                    )
-
+            clean = _sanitize_common(content)
+            data = json.loads(clean)
         fmea_json = data.get("fmea", [])
         ppr_json = data.get("ppr", {"products": [], "processes": [], "resources": []})
         return fmea_json, ppr_json
