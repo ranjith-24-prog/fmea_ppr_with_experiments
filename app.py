@@ -355,21 +355,6 @@ st.markdown(
         font-size: 0.95rem;
     }
     
-    /* Optional subtle focus */
-    div[data-testid="stTextArea"] textarea:focus-visible {
-        outline: none !important;
-        border: none !important;
-        box-shadow: none !important;
-        background-color: #ffffff !important;
-    }
-
-
-
-
-
-
-
-
     </style>
     """,
     unsafe_allow_html=True,
