@@ -343,29 +343,6 @@ st.markdown(
     }
     
 
-    /* --- Final fix: Case title pill (Save as test case) --- */
-    /* Match the specific Case title input by its placeholder text */
-    .stTextInput:has(input[placeholder^="Manual Aluminium airframe TIG welding"]) > div > div {
-        background-color: transparent !important;
-        padding: 0 !important;
-        border-radius: 999px !important;
-        box-shadow: none !important;
-    }
-    
-    .stTextInput:has(input[placeholder^="Manual Aluminium airframe TIG welding"]) input {
-        border: 1px solid #d4d4d8 !important;
-        border-radius: 999px !important;
-        background-color: #f9fafb !important;
-        padding: 0.6rem 1rem !important;
-    }
-
-    /* Fix Case title fields */
-    div[data-testid="stTextInput"] input {
-        border-radius: 4px !important;
-        border: 1px solid #d1d5db !important;
-        padding: 0.35rem 0.75rem !important;
-    }
-
     /* Single-pill style for all text inputs (Case title etc.) */
 
     /* Outer wrapper: no visible border or radius */
