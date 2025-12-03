@@ -346,10 +346,10 @@ class LLM:
 
         # Primary parse
         try:
-            data = json.loads(content)
+            data = json.loads(txt)
         except Exception:
             # Clean obvious noise (control chars etc.)
-            clean = _sanitize_common(content)
+            clean = _sanitize_common(txt)
 
             # Try direct parse on cleaned text
             try:
