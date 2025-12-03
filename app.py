@@ -370,6 +370,22 @@ def _link_case_ppr(sb: Client, case_id: int, table: str, id_field: str, ids: lis
         return
     sb.table(table).upsert(rows, on_conflict=f"case_id,{id_field}").execute()
 
+
+# Bundle helpers that modes will need
+helpers = {
+    "build_supabase": _build_supabase,
+    "supabase_bucket_name": _supabase_bucket_name,
+    "guess_mime": _guess_mime,
+    "ppr_editor_block": ppr_editor_block,
+    "ppr_to_cytoscape": ppr_to_cytoscape,
+    "_select_kb_rows": _select_kb_rows,
+    "_complete_missing_with_llm": _complete_missing_with_llm,
+    "_normalize_numeric_and_rpn": _normalize_numeric_and_rpn,
+    "_get_or_create_ppr": _get_or_create_ppr,
+    "_link_case_ppr": _link_case_ppr,
+}
+
+
 # -----------------------
 # Top navigation via tabs (works on all recent Streamlit versions)
 # -----------------------
