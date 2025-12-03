@@ -379,13 +379,14 @@ st.markdown(
         padding: 0.6rem 1rem !important;
         box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
         font-size: 0.95rem;
-    }
+    
     div[data-testid="stTextInput"] input:focus-visible {
-        outline: none !important;
-        border: 1px solid #0f766e !important;
-        box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.4);
-        background-color: #ffffff !important;
-    }
+    outline: none !important;
+    border: 1px solid #22c55e33 !important;   /* very soft green */
+    box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.15);
+    background-color: #ffffff !important;
+}
+
 
 
 
