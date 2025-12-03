@@ -9,10 +9,10 @@ import json
 import pandas as pd
 import streamlit as st
 import datetime as dt
+st.set_page_config(page_title="CBR FMEA Assistant", layout="wide")
 from backend.export import to_pretty_excel_bytes, to_structured_xml_bytes
 from supabase import create_client, Client
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
-from styles import apply_global_styles, AGGRID_CUSTOM_CSS
 
 # Backend utilities (project-specific; keep names as in your repo)
 #from backend.db import init_and_seed, get_conn
@@ -24,11 +24,8 @@ from backend.backend_fmea_pipeline import (
     apply_enhancement,       # returns enhanced rows + PPR (3 keys)
     generate_ppr_only,       # returns PPR with "input_products" + classic keys
 )
-from modes.knowledge_base import render_knowledge_base
 
 
-st.set_page_config(page_title="CBR FMEA Assistant", layout="wide")
-apply_global_styles()
 
 
 # -----------------------
@@ -370,19 +367,6 @@ def _link_case_ppr(sb: Client, case_id: int, table: str, id_field: str, ids: lis
     if not rows:
         return
     sb.table(table).upsert(rows, on_conflict=f"case_id,{id_field}").execute()
-
-
-# Bundle helpers that modes will need
-helpers = {
-    "_guess_mime": _guess_mime,
-    "_normalize_ppr_safe": _normalize_ppr_safe,
-    "ppr_editor_block": ppr_editor_block,
-    "_build_supabase": _build_supabase,
-    "_supabase_bucket_name": _supabase_bucket_name,
-    "_to_plain_list": _to_plain_list,
-}
-
-
 
 # -----------------------
 # Top navigation via tabs (works on all recent Streamlit versions)
@@ -803,6 +787,7 @@ with tab_kb:
                 st.success(f"Created case #{case_id} with RAW file, FMEA rows, PPR links (including inputs), and kb_index.")
             except Exception as e:
                 st.error(f"Save failed: {e}")
+
 
 
 # -----------------------
