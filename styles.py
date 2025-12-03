@@ -370,3 +370,8 @@ AGGRID_CUSTOM_CSS = {
         "background-color": "#e0f2fe !important",
     },
 }
+
+
+def apply_global_styles() -> None:
+    """Inject the global CSS into the Streamlit app."""
+    st.markdown(STYLE_CSS, unsafe_allow_html=True)
