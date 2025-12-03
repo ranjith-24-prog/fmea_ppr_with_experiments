@@ -1551,7 +1551,7 @@ with tab_fmea:
 
     # 4) Review grid (FMEA rows)
     if "proposed_rows" in st.session_state:
-        st.subheader("Review and export")
+        st.subheader("Review FMEA rows")
         df = pd.DataFrame(st.session_state["proposed_rows"])
         if "_provenance_vec" in st.session_state and len(
             st.session_state["_provenance_vec"]
