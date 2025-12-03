@@ -25,6 +25,7 @@ def render_fmea_assistant(embedder, helpers):
     _normalize_numeric_and_rpn = helpers["_normalize_numeric_and_rpn"]
     _to_plain_list = helpers["_to_plain_list"]
     _get_secret = helpers["_get_secret"]
+    ppr_editor_block = helpers["ppr_editor_block"]
 
 
 
