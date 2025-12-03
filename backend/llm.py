@@ -361,7 +361,12 @@ class LLM:
                 end = text.rfind("}")
                 if start != -1 and end != -1 and end > start:
                     candidate = text[start : end + 1]
-                    data = json.loads(candidate)
+                    try:
+                        data = json.loads(candidate)
+                    except Exception as e2:
+                        # Optional: debug the broken JSON fragment
+                        st.write("DEBUG JSON candidate parse failed:", repr(candidate[:400]))
+                        raise ValueError(f"LLM did not return valid JSON: {e2}")
                 else:
                     raise ValueError(
                         "LLM did not return valid JSON: no JSON object could be extracted."
