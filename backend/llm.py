@@ -333,8 +333,8 @@ class LLM:
         )
 
         content = self._chat(system, user, temperature=0.2, max_tokens=3200)
-        st.write("DEBUG raw LLM (first 400 chars):")
-        st.code((content or "")[:400], language="json")
+        #st.write("DEBUG raw LLM (first 400 chars):")
+        #st.code((content or "")[:400], language="json")
 
         if not content or not str(content).strip():
             raise ValueError("LLM did not return any content (empty response).")
@@ -365,7 +365,7 @@ class LLM:
                         data = json.loads(candidate)
                     except Exception as e2:
                         # Optional: debug the broken JSON fragment
-                        st.write("DEBUG JSON candidate parse failed:", repr(candidate[:400]))
+                        #st.write("DEBUG JSON candidate parse failed:", repr(candidate[:400]))
                         raise ValueError(f"LLM did not return valid JSON: {e2}")
                 else:
                     raise ValueError(
