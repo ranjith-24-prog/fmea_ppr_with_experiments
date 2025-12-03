@@ -333,14 +333,6 @@ st.markdown(
         background-color: transparent !important;
         border-radius: 999px !important;
     }
-
-    /* Fix Save-as-test-case title pill (any text_input within that form) */
-    div[data-testid="stForm"] .stTextInput > div > div {
-        background-color: transparent !important;
-        padding: 0 !important;
-        border-radius: 999px !important;
-        box-shadow: none !important;
-    }
     
 
     /* Single-pill style for all text inputs (Case title etc.) */
