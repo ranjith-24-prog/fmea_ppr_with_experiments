@@ -742,6 +742,7 @@ def _complete_missing_with_llm(kb_rows: list[dict], query_ppr: dict, llm: LLM) -
 
     try:
         rows_json = json.dumps(prompt, ensure_ascii=False)
+        print("DEBUG _complete_missing_with_llm called; kb_rows:", len(kb_rows))
         gen_rows, _ = llm.generate_fmea_and_ppr_json(context_text=rows_json, ppr_hint=None)
         print("DEBUG LLM FMEA rows type/len:", type(gen_rows), len(gen_rows) if isinstance(gen_rows, list) else "n/a")
         out = []
@@ -1415,7 +1416,7 @@ with tab_fmea:
                 st.session_state["fa_fmea_kb_ms"] = int(
                     (time.time() - t_kb0) * 1000
                 )
-
+            print("DEBUG Generate FMEA clicked; kb_rows:", len(kb_rows))
             with st.spinner("Filling gaps with LLM..."):
                 t_llm0 = time.time()
                 llm_rows = _complete_missing_with_llm(kb_rows, query_ppr, llm)
