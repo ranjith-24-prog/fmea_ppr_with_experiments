@@ -312,16 +312,16 @@ class LLM:
             "'fmea' should be an array of FMEA row objects with keys atleast 10 rows:\n"
             "Each FMEA row's 'system_element' must be a process step (e.g., Preparation, Welding, Inspection, Handling, Fixturing, Cleaning, Post-weld Inspection)\n"
             '["system_element", "function", "potential_failure", "c1", "potential_effect", "s1", "c2", "c3", "potential_cause", "o1", '
-            '"current_preventive_action", "current_detection_action", "d1", "rpn1", "recommended_action", "rd", "action_taken", "s2", "o2", "d2", "rpn2", "notes"]\n'
+            '"current_preventive_action", "current_detection_action", "d1", "rpn1", "recommended_action", "rd", "action_taken", "s2", "o2", "d2", "rpn2", "notes"]\n"
             "'ppr' should be an object with keys 'products', 'processes', 'resources', each mapping to a list of strings.\n"
             "Output ONLY the JSON object, no markdown or extra text.\n"
             "Example:\n"
             '{\n'
-            '  "fmea": [ ... FMEA rows ... ],\n'
-            '  "ppr": {\n'
-            '    "products": ["Aluminium profile"],\n'
-            '    "processes": ["Laser welding"],\n'
-            '    "resources": ["Shielding gas"]\n'
+            '  \"fmea\": [ ... FMEA rows ... ],\n'
+            '  \"ppr\": {\n'
+            '    \"products\": [\"Aluminium profile\"],\n'
+            '    \"processes\": [\"Laser welding\"],\n'
+            '    \"resources\": [\"Shielding gas\"]\n'
             '  }\n'
             '}'
         )
@@ -331,17 +331,46 @@ class LLM:
             f"PPR context hints:\n{hint_json}\n"
             "Remember: output exactly one JSON object as described above."
         )
+
         content = self._chat(system, user, temperature=0.2, max_tokens=3200)
         st.write("DEBUG raw LLM (first 400 chars):")
         st.code((content or "")[:400], language="json")
+
+        if not content or not str(content).strip():
+            raise ValueError("LLM did not return any content (empty response).")
+
+        # Strip ```
+        txt = str(content).strip()
+        if txt.startswith("```"):
+            first_nl = txt.find("\n")
+            if first_nl != -1:
+                txt = txt[first_nl + 1 :]
+            if txt.strip().endswith("```
+                txt = txt[: txt.rfind("```")].strip()
+
+        # Primary parse from cleaned txt
         try:
-            data = json.loads(content)
+            data = json.loads(txt)
         except Exception:
-            clean = _sanitize_common(content)
-            data = json.loads(clean)
+            clean = _sanitize_common(txt)
+            try:
+                data = json.loads(clean)
+            except Exception:
+                text = clean.strip()
+                start = text.find("{")
+                end = text.rfind("}")
+                if start != -1 and end != -1 and end > start:
+                    candidate = text[start : end + 1]
+                    data = json.loads(candidate)
+                else:
+                    raise ValueError(
+                        "LLM did not return valid JSON: no JSON object could be extracted."
+                    )
+
         fmea_json = data.get("fmea", [])
         ppr_json = data.get("ppr", {"products": [], "processes": [], "resources": []})
         return fmea_json, ppr_json
+
 
 
     def generate_ppr_from_text(
