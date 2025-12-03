@@ -1427,8 +1427,8 @@ with tab_fmea:
 
             merged = _normalize_numeric_and_rpn(kb_rows + llm_rows)
             #st.write(f"DEBUG: merged rows = {len(merged)}, "
-                     f"KB = {sum(1 for r in merged if r.get('_provenance')=='kb')}, "
-                     f"LLM = {sum(1 for r in merged if r.get('_provenance')=='llm')}")
+            #         f"KB = {sum(1 for r in merged if r.get('_provenance')=='kb')}, "
+            #         f"LLM = {sum(1 for r in merged if r.get('_provenance')=='llm')}")
             
 
             st.session_state["proposed_rows"] = merged
