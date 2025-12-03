@@ -334,23 +334,36 @@ st.markdown(
         border-radius: 999px !important;
     }
     
-    /* Outer wrapper: visible, same radius as input */
-    div[data-testid="stTextInput"] > div > div {
+    /* Single-card style for Case description textareas */
+
+    /* Outer wrapper: rounded card with border */
+    div[data-testid="stTextArea"] > div > div {
         background-color: #f9fafb !important;
-        padding: 0.6rem 1rem !important;
-        border-radius: 12px !important;
+        padding: 0 !important;
+        border-radius: 14px !important;
         border: 1px solid #d4d4d8 !important;
-        box-shadow: none !important;
+        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
     }
     
-    /* Inner input: same radius, no extra border */
-    div[data-testid="stTextInput"] input {
-        border-radius: 12px !important;
+    /* Inner textarea: same radius, no extra border */
+    div[data-testid="stTextArea"] textarea {
+        border-radius: 14px !important;
         border: none !important;
         background-color: transparent !important;
-        padding: 0.6rem 1rem !important;
+        padding: 0.9rem 1rem !important;
         box-shadow: none !important;
+        font-size: 0.95rem;
     }
+    
+    /* Optional subtle focus */
+    div[data-testid="stTextArea"] textarea:focus-visible {
+        outline: none !important;
+        border: none !important;
+        box-shadow: none !important;
+        background-color: #ffffff !important;
+    }
+
+
 
 
 
