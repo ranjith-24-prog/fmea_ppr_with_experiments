@@ -356,6 +356,36 @@ st.markdown(
         font-size: 0.95rem;
     }
 
+    /* Final fix: single pill Case title */
+
+    /* Outer wrapper: flat, no border, even on focus */
+    div[data-testid="stTextInput"] > div > div {
+        background-color: transparent !important;
+        padding: 0 !important;
+        border-radius: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+    div[data-testid="stTextInput"] > div > div:focus-within {
+        border: none !important;
+        box-shadow: none !important;
+    }
+    
+    /* Inner input: pill + focus state */
+    div[data-testid="stTextInput"] input {
+        border-radius: 999px !important;
+        border: 1px solid #d4d4d8 !important;
+        background-color: #f9fafb !important;
+        padding: 0.6rem 1rem !important;
+        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
+        font-size: 0.95rem;
+    }
+    div[data-testid="stTextInput"] input:focus-visible {
+        outline: none !important;
+        border: 1px solid #0f766e !important;
+        box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.4);
+        background-color: #ffffff !important;
+    }
 
 
 
