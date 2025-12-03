@@ -411,6 +411,13 @@ st.markdown(
         padding: 0.6rem 1rem !important;
     }
 
+    /* Fix Case title fields */
+    div[data-testid="stTextInput"] input {
+        border-radius: 4px !important;
+        border: 1px solid #d1d5db !important;
+        padding: 0.35rem 0.75rem !important;
+    }
+
 
 
     </style>
