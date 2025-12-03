@@ -336,32 +336,35 @@ st.markdown(
     
     /* Final: Case title matches Case description */
 
-    /* Outer wrapper: same border and radius as textarea */
+    /* Universal single-line input style – matches Case description card */
+
+    /* Reset any wrapper rounding/border */
     div[data-testid="stTextInput"] > div > div {
-        background-color: #f9fafb !important;
+        background-color: transparent !important;
         padding: 0 !important;
-        border-radius: 14px !important;            /* SAME as textarea */
-        border: 1px solid #d4d4d8 !important;
-        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
+        border: none !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
     }
     
-    /* Inner input: no border, same radius */
+    /* Actual input draws the border and radius */
     div[data-testid="stTextInput"] input {
-        border-radius: 14px !important;            /* SAME as wrapper */
-        border: none !important;
-        background-color: transparent !important;
+        border: 1px solid #d4d4d8 !important;
+        border-radius: 14px !important;             /* same as textarea */
+        background-color: #f9fafb !important;
         padding: 0.6rem 1rem !important;
-        box-shadow: none !important;
+        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
         font-size: 0.95rem;
     }
     
-    /* Optional minimal focus */
+    /* Optional subtle focus */
     div[data-testid="stTextInput"] input:focus-visible {
         outline: none !important;
-        border: none !important;
+        border: 1px solid #0f766e33 !important;
         box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.12);
         background-color: #ffffff !important;
     }
+
 
 
 
