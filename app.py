@@ -334,28 +334,35 @@ st.markdown(
         border-radius: 999px !important;
     }
     
-    /* Single-card style for Case description textareas */
+    /* Single-card style for Case title input */
 
-    /* Single-pill Case title with thin border like description */
-
-     /* Outer wrapper: rounded card with border */
-    div[data-testid="stTextArea"] > div > div {
+    /* Outer wrapper: rounded with thin border */
+    div[data-testid="stTextInput"] > div > div {
         background-color: #f9fafb !important;
         padding: 0 !important;
-        border-radius: 14px !important;
+        border-radius: 999px !important;
         border: 1px solid #d4d4d8 !important;
         box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
     }
     
-    /* Inner textarea: same radius, no extra border */
-    div[data-testid="stTextArea"] textarea {
-        border-radius: 13px !important;
+    /* Inner input: same radius, no extra border */
+    div[data-testid="stTextInput"] input {
+        border-radius: 999px !important;
         border: none !important;
         background-color: transparent !important;
-        padding: 0.9rem 1rem !important;
+        padding: 0.6rem 1rem !important;
         box-shadow: none !important;
         font-size: 0.95rem;
     }
+    
+    /* Optional subtle focus */
+    div[data-testid="stTextInput"] input:focus-visible {
+        outline: none !important;
+        border: none !important;
+        box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.15);
+        background-color: #ffffff !important;
+    }
+
 
     
     </style>
