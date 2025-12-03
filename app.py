@@ -334,28 +334,6 @@ st.markdown(
         border-radius: 999px !important;
     }
     
-
-    /* Single-pill style for all text inputs (Case title etc.) */
-
-    /* Outer wrapper: no visible border or radius */
-    div[data-testid="stTextInput"] > div > div {
-        background-color: transparent !important;
-        padding: 0 !important;
-        border-radius: 0 !important;
-        border: none !important;
-        box-shadow: none !important;
-    }
-    
-    /* Inner input: actual pill */
-    div[data-testid="stTextInput"] input {
-        border-radius: 999px !important;
-        border: 1px solid #d4d4d8 !important;
-        background-color: #f9fafb !important;
-        padding: 0.6rem 1rem !important;
-        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
-        font-size: 0.95rem;
-    }
-
     /* Final fix: single pill Case title */
 
     /* Outer wrapper: flat, no border, even on focus */
@@ -371,21 +349,22 @@ st.markdown(
         box-shadow: none !important;
     }
     
-    /* Inner input: pill + focus state */
     div[data-testid="stTextInput"] input {
         border-radius: 999px !important;
         border: 1px solid #d4d4d8 !important;
-        background-color: #f9fafb !important;
+        background: linear-gradient(135deg, #eef2ff, #f9fafb) !important;
         padding: 0.6rem 1rem !important;
         box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
         font-size: 0.95rem;
+    }
     
     div[data-testid="stTextInput"] input:focus-visible {
-    outline: none !important;
-    border: 1px solid #22c55e33 !important;   /* very soft green */
-    box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.15);
-    background-color: #ffffff !important;
-}
+        outline: none !important;
+        border: 1px solid #0f766e33 !important;      /* soft green, like select */
+        box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.15);
+        background-color: #ffffff !important;
+    }
+
 
 
 
