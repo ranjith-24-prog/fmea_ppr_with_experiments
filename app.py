@@ -2233,12 +2233,12 @@ with tab_cases:
 
             c1, c2 = st.columns(2)
             with c1:
-                st.write("Inputs")
+                st.write("Input Products")
                 st.dataframe(_list_to_df("Input Products", ppr.get("input_products")), use_container_width=True)
                 st.write("Processes")
                 st.dataframe(_list_to_df("Processes", ppr.get("processes")), use_container_width=True)
             with c2:
-                st.write("Products")
+                st.write("Output Products")
                 st.dataframe(_list_to_df("Products", ppr.get("products")), use_container_width=True)
                 st.write("Resources")
                 st.dataframe(_list_to_df("Resources", ppr.get("resources")), use_container_width=True)
