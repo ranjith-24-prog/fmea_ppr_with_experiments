@@ -265,14 +265,6 @@ st.markdown(
     }
 
     /* ---------- TIGHT PILL / CARD FOR INPUTS & SELECTS ---------- */
-
-    /* Text inputs (Case title, etc.) – remove inner white band */
-    .stTextInput > div > div {
-        border-radius: 999px !important;
-        background-color: transparent !important;
-        padding: 0 !important;
-        box-shadow: none !important;
-    }
     
     
     /* Textareas (description, PPR fields) – remove outer white frame */
