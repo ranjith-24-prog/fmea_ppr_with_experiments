@@ -2239,7 +2239,7 @@ with tab_cases:
                 st.dataframe(_list_to_df("Processes", ppr.get("processes")), use_container_width=True)
             with c2:
                 st.write("Output Products")
-                st.dataframe(_list_to_df("Products", ppr.get("products")), use_container_width=True)
+                st.dataframe(_list_to_df(" Output Products", ppr.get("products")), use_container_width=True)
                 st.write("Resources")
                 st.dataframe(_list_to_df("Resources", ppr.get("resources")), use_container_width=True)
 
