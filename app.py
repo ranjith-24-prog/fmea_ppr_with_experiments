@@ -334,34 +334,24 @@ st.markdown(
         border-radius: 999px !important;
     }
     
-    /* Final fix: single pill Case title */
-
-    /* Outer wrapper: flat, no border */
+    /* Outer wrapper: visible, same radius as input */
     div[data-testid="stTextInput"] > div > div {
-        background-color: transparent !important;
+        background-color: #f9fafb !important;
         padding: 0 !important;
-        border-radius: 0 !important;
-        border: none !important;
+        border-radius: 12px !important;
+        border: 1px solid #d4d4d8 !important;
         box-shadow: none !important;
     }
     
-    /* Inner input: single pill */
+    /* Inner input: same radius, no extra border */
     div[data-testid="stTextInput"] input {
-        border-radius: 999px !important;
-        border: 1px solid #d4d4d8 !important;
-        background: linear-gradient(135deg, #eef2ff, #f9fafb) !important;
+        border-radius: 12px !important;
+        border: none !important;
+        background-color: transparent !important;
         padding: 0.6rem 1rem !important;
-        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
-        font-size: 0.95rem;
-    }
-    
-    /* Optional: very subtle focus */
-    div[data-testid="stTextInput"] input:focus-visible {
-        outline: none !important;
-        border: 1px solid #d4d4d8 !important;
         box-shadow: none !important;
-        background-color: #ffffff !important;
     }
+
 
 
 
