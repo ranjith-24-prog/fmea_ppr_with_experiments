@@ -9,10 +9,10 @@ import json
 import pandas as pd
 import streamlit as st
 import datetime as dt
-st.set_page_config(page_title="CBR FMEA Assistant", layout="wide")
 from backend.export import to_pretty_excel_bytes, to_structured_xml_bytes
 from supabase import create_client, Client
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
+from styles import apply_global_styles, AGGRID_CUSTOM_CSS
 
 # Backend utilities (project-specific; keep names as in your repo)
 #from backend.db import init_and_seed, get_conn
@@ -24,6 +24,11 @@ from backend.backend_fmea_pipeline import (
     apply_enhancement,       # returns enhanced rows + PPR (3 keys)
     generate_ppr_only,       # returns PPR with "input_products" + classic keys
 )
+#from modes.knowledge_base import render_knowledge_base
+
+
+st.set_page_config(page_title="CBR FMEA Assistant", layout="wide")
+apply_global_styles()
 
 
 
