@@ -3,7 +3,7 @@ import datetime as dt
 import pandas as pd
 import streamlit as st
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
-
+import numpy as np
 from styles import AGGRID_CUSTOM_CSS
 from backend.llm import LLM, LLM_REGISTRY
 from backend.export import to_pretty_excel_bytes, to_structured_xml_bytes
