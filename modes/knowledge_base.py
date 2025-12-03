@@ -177,7 +177,6 @@ def render_knowledge_base(embedder, helpers):
             llm_kb.set_model(st.session_state["active_model_id"])
 
             if st.button("Generate PPR", key="kb_generate_ppr_from_desc"):
-                import time
                 t0 = time.time()
                 try:
                     sample_rows = (st.session_state.get("parsed_fmea") or [])[:10]
