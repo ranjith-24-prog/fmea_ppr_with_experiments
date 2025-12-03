@@ -345,7 +345,7 @@ class LLM:
             first_nl = txt.find("\n")
             if first_nl != -1:
                 txt = txt[first_nl + 1 :]
-            if txt.strip().endswith("```
+            if txt.strip().endswith("```"):
                 txt = txt[: txt.rfind("```")].strip()
 
         # Primary parse from cleaned txt
