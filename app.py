@@ -24,6 +24,7 @@ from backend.backend_fmea_pipeline import (
     apply_enhancement,       # returns enhanced rows + PPR (3 keys)
     generate_ppr_only,       # returns PPR with "input_products" + classic keys
 )
+from modes.knowledge_base import render_knowledge_base
 
 
 st.set_page_config(page_title="CBR FMEA Assistant", layout="wide")
