@@ -1,7 +1,7 @@
 # llm.py
 import os, time, json, requests, re
 from typing import Any, Dict, Tuple, Optional, List
-
+import streamlit as st
 from sentence_transformers import SentenceTransformer
 import numpy as np
 
@@ -332,6 +332,8 @@ class LLM:
             "Remember: output exactly one JSON object as described above."
         )
         content = self._chat(system, user, temperature=0.2, max_tokens=3200)
+        st.write("DEBUG raw LLM (first 400 chars):")
+        st.code((content or "")[:400], language="json")
         try:
             data = json.loads(content)
         except Exception:
