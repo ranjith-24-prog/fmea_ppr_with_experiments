@@ -337,7 +337,7 @@ st.markdown(
     /* Outer wrapper: visible, same radius as input */
     div[data-testid="stTextInput"] > div > div {
         background-color: #f9fafb !important;
-        padding: 0 !important;
+        padding: 0.6rem 1rem !important;
         border-radius: 12px !important;
         border: 1px solid #d4d4d8 !important;
         box-shadow: none !important;
