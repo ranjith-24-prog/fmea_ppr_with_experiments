@@ -373,6 +373,26 @@ def _link_case_ppr(sb: Client, case_id: int, table: str, id_field: str, ids: lis
         return
     sb.table(table).upsert(rows, on_conflict=f"case_id,{id_field}").execute()
 
+
+helpers = {
+    "_guess_mime": _guess_mime,
+    "_build_supabase": _build_supabase,
+    "_supabase_bucket_name": _supabase_bucket_name,
+    "_normalize_ppr_safe": _normalize_ppr_safe,
+    "ppr_editor_block": ppr_editor_block,
+    "ppr_to_cytoscape": ppr_to_cytoscape,
+    "_concat_list": _concat_list,
+    "_to_plain_list": _to_plain_list,
+    "_fetch_candidate_cases": _fetch_candidate_cases,
+    "_fetch_rows_for_cases": _fetch_rows_for_cases,
+    "_score_row_against_query": _score_row_against_query,
+    "_select_kb_rows": _select_kb_rows,
+    "_complete_missing_with_llm": _complete_missing_with_llm,
+    "_normalize_numeric_and_rpn": _normalize_numeric_and_rpn,
+    "_get_or_create_ppr": _get_or_create_ppr,
+    "_link_case_ppr": _link_case_ppr,
+}
+
 # -----------------------
 # Top navigation via tabs (works on all recent Streamlit versions)
 # -----------------------
