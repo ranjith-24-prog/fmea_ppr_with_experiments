@@ -312,16 +312,16 @@ class LLM:
             "'fmea' should be an array of FMEA row objects with keys atleast 10 rows:\n"
             "Each FMEA row's 'system_element' must be a process step (e.g., Preparation, Welding, Inspection, Handling, Fixturing, Cleaning, Post-weld Inspection)\n"
             '["system_element", "function", "potential_failure", "c1", "potential_effect", "s1", "c2", "c3", "potential_cause", "o1", '
-            '"current_preventive_action", "current_detection_action", "d1", "rpn1", "recommended_action", "rd", "action_taken", "s2", "o2", "d2", "rpn2", "notes"]\n"
+            '"current_preventive_action", "current_detection_action", "d1", "rpn1", "recommended_action", "rd", "action_taken", "s2", "o2", "d2", "rpn2", "notes"]\n'
             "'ppr' should be an object with keys 'products', 'processes', 'resources', each mapping to a list of strings.\n"
             "Output ONLY the JSON object, no markdown or extra text.\n"
             "Example:\n"
             '{\n'
-            '  \"fmea\": [ ... FMEA rows ... ],\n'
-            '  \"ppr\": {\n'
-            '    \"products\": [\"Aluminium profile\"],\n'
-            '    \"processes\": [\"Laser welding\"],\n'
-            '    \"resources\": [\"Shielding gas\"]\n'
+            '  "fmea": [ ... FMEA rows ... ],\n'
+            '  "ppr": {\n'
+            '    "products": ["Aluminium profile"],\n'
+            '    "processes": ["Laser welding"],\n'
+            '    "resources": ["Shielding gas"]\n'
             '  }\n'
             '}'
         )
