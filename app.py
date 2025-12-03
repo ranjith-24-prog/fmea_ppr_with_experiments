@@ -340,22 +340,6 @@ st.markdown(
         margin: 0 !important;
         background-color: transparent !important;
     }
-
-    /* ---- FIX: Case title input pill ---- */
-    /* Remove extra inner white band */
-    .stTextInput:has(input[placeholder^="e.g., Ultrasonic welding of battery tray v1"]) > div > div {
-        background-color: transparent !important;
-        padding: 0 !important;
-        border-radius: 999px !important;
-        box-shadow: none !important;
-    }
-    
-    .stTextInput:has(input[placeholder^="e.g., Ultrasonic welding of battery tray v1"]) input {
-        border: 1px solid #d4d4d8 !important;
-        border-radius: 999px !important;
-        background-color: #f9fafb !important;
-        padding: 0.6rem 1rem !important;
-    }
     
     /* ---- FIX: Select LLM pill ---- */
     /* Outer pill container */
@@ -417,6 +401,28 @@ st.markdown(
         border: 1px solid #d1d5db !important;
         padding: 0.35rem 0.75rem !important;
     }
+
+    /* Single-pill style for all text inputs (Case title etc.) */
+
+    /* Outer wrapper: no visible border or radius */
+    div[data-testid="stTextInput"] > div > div {
+        background-color: transparent !important;
+        padding: 0 !important;
+        border-radius: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+    
+    /* Inner input: actual pill */
+    div[data-testid="stTextInput"] input {
+        border-radius: 999px !important;
+        border: 1px solid #d4d4d8 !important;
+        background-color: #f9fafb !important;
+        padding: 0.6rem 1rem !important;
+        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
+        font-size: 0.95rem;
+    }
+
 
 
 
