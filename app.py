@@ -742,9 +742,9 @@ def _complete_missing_with_llm(kb_rows: list[dict], query_ppr: dict, llm: LLM) -
 
     try:
         rows_json = json.dumps(prompt, ensure_ascii=False)
-        st.write(f"DEBUG: _complete_missing_with_llm called; kb_rows = {len(kb_rows)}")
+        #st.write(f"DEBUG: _complete_missing_with_llm called; kb_rows = {len(kb_rows)}")
         gen_rows, _ = llm.generate_fmea_and_ppr_json(context_text=rows_json, ppr_hint=None)
-        st.write(f"DEBUG: LLM FMEA rows len = {len(gen_rows) if isinstance(gen_rows, list) else 'n/a'}")
+        #st.write(f"DEBUG: LLM FMEA rows len = {len(gen_rows) if isinstance(gen_rows, list) else 'n/a'}")
         out = []
         if isinstance(gen_rows, list):
             for r in gen_rows:
@@ -752,7 +752,7 @@ def _complete_missing_with_llm(kb_rows: list[dict], query_ppr: dict, llm: LLM) -
                 out.append(r)
         return out
     except Exception as e:
-        st.error(f"DEBUG _complete_missing_with_llm error: {e}")
+        #st.error(f"DEBUG _complete_missing_with_llm error: {e}")
         return []
 
 
@@ -1405,7 +1405,7 @@ with tab_fmea:
         if not user_text or len(user_text.strip()) < 5:
             st.warning("Please enter a brief description.")
         else:
-            st.write("DEBUG: Generate FMEA block entered.")
+            #st.write("DEBUG: Generate FMEA block entered.")
             query_ppr = _derive_ppr_from_text(user_text)
 
             sb = _build_supabase()
@@ -1417,7 +1417,7 @@ with tab_fmea:
                 st.session_state["fa_fmea_kb_ms"] = int(
                     (time.time() - t_kb0) * 1000
                 )
-            st.write(f"DEBUG: KB rows retrieved = {len(kb_rows)}")
+            #st.write(f"DEBUG: KB rows retrieved = {len(kb_rows)}")
             with st.spinner("Filling gaps with LLM..."):
                 t_llm0 = time.time()
                 llm_rows = _complete_missing_with_llm(kb_rows, query_ppr, llm)
@@ -1426,7 +1426,7 @@ with tab_fmea:
                 )
 
             merged = _normalize_numeric_and_rpn(kb_rows + llm_rows)
-            st.write(f"DEBUG: merged rows = {len(merged)}, "
+            #st.write(f"DEBUG: merged rows = {len(merged)}, "
                      f"KB = {sum(1 for r in merged if r.get('_provenance')=='kb')}, "
                      f"LLM = {sum(1 for r in merged if r.get('_provenance')=='llm')}")
             
