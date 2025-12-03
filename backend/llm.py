@@ -346,12 +346,12 @@ class LLM:
 
         # Prepare text for JSON parsing (strip ```json fences if present)
         txt = str(content).strip()
-        if txt.startswith("```
+        if txt.startswith("```"):
             first_nl = txt.find("\n")
             if first_nl != -1:
                 txt = txt[first_nl + 1 :]
             if txt.strip().endswith("```"):
-                txt = txt[: txt.rfind("```
+                txt = txt[: txt.rfind("```")].strip()
 
         # Primary parse
         try:
