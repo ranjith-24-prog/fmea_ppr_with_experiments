@@ -336,24 +336,26 @@ st.markdown(
     
     /* Single-card style for Case description textareas */
 
-    /* Outer wrapper: rounded card with border */
-    div[data-testid="stTextArea"] > div > div {
+    /* Single-pill Case title with thin border like description */
+
+    div[data-testid="stTextInput"] > div > div {
         background-color: #f9fafb !important;
         padding: 0 !important;
-        border-radius: 14px !important;
-        border: 1px solid #d4d4d8 !important;
+        border-radius: 999px !important;
+        border: 1px solid #d4d4d8 !important;   /* thin grey border */
         box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
     }
     
-    /* Inner textarea: same radius, no extra border */
-    div[data-testid="stTextArea"] textarea {
-        border-radius: 14px !important;
+    /* Inner input: no own border, just padding */
+    div[data-testid="stTextInput"] input {
+        border-radius: 999px !important;
         border: none !important;
         background-color: transparent !important;
-        padding: 0.9rem 1rem !important;
+        padding: 0.6rem 1rem !important;
         box-shadow: none !important;
         font-size: 0.95rem;
     }
+
     
     </style>
     """,
