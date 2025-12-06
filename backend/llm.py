@@ -317,7 +317,7 @@ class LLM:
             '"recommended_action", "rd", "action_taken", "s2", "o2", "d2", "rpn2", "notes"].\n'
             "Populate meaningful values ONLY for these columns: "
             "'system_element', 'function', 'potential_failure', 'potential_effect', "
-            "'s1', 'o1', 'current_preventive_action', 'current_detection_action', 'd1', and 'rpn1' "
+            "'s1', 'potential_effect', 'o1', 'current_preventive_action', 'current_detection_action', 'd1', and 'rpn1' "
             "(with rpn1 = s1 * o1 * d1).\n"
             "Always set 's2', 'o2', 'd2', 'rpn2', 'c1', 'c2', 'c3', 'recommended_action', 'rd', 'action_taken', and 'notes' "
             "to null or an empty string; do not invent values for them.\n"
