@@ -310,20 +310,28 @@ class LLM:
             "You are an expert in manufacturing Process FMEA (DIN EN 60812/APIS) and PPR (Product-Process-Resource) categorization.\n"
             "Given a production description, generate EXACTLY one JSON object with keys 'fmea' and 'ppr'.\n"
             "'fmea' should be an array of concise FMEA row objects (around 5–8 rows is sufficient, never more than 12).\n"
-            "Each FMEA row's 'system_element' must be a process step (e.g., Preparation, Welding, Inspection, Handling, Fixturing, Cleaning, Post-weld Inspection)\n"
-            '["system_element", "function", "potential_failure", "c1", "potential_effect", "s1", "c2", "c3", "potential_cause", "o1", '
-            '"current_preventive_action", "current_detection_action", "d1", "rpn1", "recommended_action", "rd", "action_taken", "s2", "o2", "d2", "rpn2", "notes"]\n'
+            "Each FMEA row's 'system_element' must be a process step (e.g., Preparation, Welding, Inspection, Handling, Fixturing, Cleaning, Post-weld Inspection).\n"
+            "Each FMEA row MUST use exactly these keys:\n"
+            '["system_element", "function", "potential_failure", "c1", "potential_effect", "s1", "c2", "c3", '
+            '"potential_cause", "o1", "current_preventive_action", "current_detection_action", "d1", "rpn1", '
+            '"recommended_action", "rd", "action_taken", "s2", "o2", "d2", "rpn2", "notes"].\n'
+            "Populate meaningful values ONLY for these columns: "
+            "'system_element', 'function', 'potential_failure', 'potential_effect', "
+            "'s1', 'o1', 'current_preventive_action', 'current_detection_action', 'd1', and 'rpn1' "
+            "(with rpn1 = s1 * o1 * d1).\n"
+            "Always set 's2', 'o2', 'd2', 'rpn2', 'c1', 'c2', 'c3', 'recommended_action', 'rd', 'action_taken', and 'notes' "
+            "to null or an empty string; do not invent values for them.\n"
             "'ppr' should be an object with keys 'products', 'processes', 'resources', each mapping to a list of strings.\n"
             "Output ONLY the JSON object, no markdown or extra text.\n"
             "Example:\n"
-            '{\n'
+            "{\n"
             '  "fmea": [ ... FMEA rows ... ],\n'
             '  "ppr": {\n'
             '    "products": ["Aluminium profile"],\n'
             '    "processes": ["Laser welding"],\n'
             '    "resources": ["Shielding gas"]\n'
-            '  }\n'
-            '}'
+            "  }\n"
+            "}"
         )
         hint_json = json.dumps(ppr_hint or {}, ensure_ascii=False)
         user = (
