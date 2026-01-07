@@ -28,52 +28,58 @@ def _post_json(url: str, headers: Dict[str, str], payload: Dict[str, Any]) -> Di
 # ---------------------------
 # Each entry defines: type, label, model, env, base_url
 LLM_REGISTRY: Dict[str, Dict[str, str]] = {
-    # 1) Perplexity (default)
+    # Perplexity
     "perplexity/sonar-pro": {
-        "label": "Perplexity Sonar Pro",
+        "label": "Perplexity Sonar Pro (sonar-pro)",
         "type": "perplexity",
         "model": "sonar-pro",
         "env": "PERPLEXITY_API_KEY",
         "base_url": os.getenv("PERPLEXITY_API_URL", "https://api.perplexity.ai"),
     },
 
-    # 2) OpenAI GPT-4o
+    # OpenAI
     "openai/gpt-4o": {
-        "label": "OpenAI GPT-4o",
+        "label": "OpenAI GPT‑4o (gpt-4o)",
         "type": "openai",
         "model": "gpt-4o",
         "env": "OPENAI_API_KEY",
         "base_url": "https://api.openai.com/v1/chat/completions",
     },
 
-    # 3) Anthropic Claude 3.5 Sonnet
-    "anthropic/claude-3-5-sonnet": {
-        "label": "Anthropic Claude 3.5 Sonnet",
+    # Anthropic (fix label + key)
+    "anthropic/claude-sonnet-4-5": {
+        "label": "Anthropic Claude Sonnet 4.5 (claude-sonnet-4-5)",
         "type": "anthropic",
         "model": "claude-sonnet-4-5",
         "env": "ANTHROPIC_API_KEY",
         "base_url": "https://api.anthropic.com/v1/messages",
     },
 
-    # 4) Google Gemini 1.5 Pro
+    # Google Gemini (use the model codes Google documents)
     "google/gemini-2.5-flash": {
-    "label": "Google Gemini 2.5 Flash",
-    "type": "google",
-    "model": "gemini-2.5-flash",   # keep short; we will prefix models/ in code
-    "env": "GOOGLE_API_KEY",
-    "base_url": "https://generativelanguage.googleapis.com/v1beta",
+        "label": "Google Gemini 2.5 Flash (gemini-2.5-flash)",
+        "type": "google",
+        "model": "gemini-2.5-flash",
+        "env": "GOOGLE_API_KEY",
+        "base_url": "https://generativelanguage.googleapis.com/v1beta",
+    },
+    "google/gemini-2.5-pro": {
+        "label": "Google Gemini 2.5 Pro (gemini-2.5-pro)",
+        "type": "google",
+        "model": "gemini-2.5-pro",
+        "env": "GOOGLE_API_KEY",
+        "base_url": "https://generativelanguage.googleapis.com/v1beta",
     },
 
-    # 5) Mistral Large
-    "mistral/mistral-large": {
-        "label": "Mistral Large",
+    # Mistral
+    "mistral/mistral-large-latest": {
+        "label": "Mistral Large (mistral-large-latest)",
         "type": "mistral",
         "model": "mistral-large-latest",
         "env": "MISTRAL_API_KEY",
         "base_url": "https://api.mistral.ai/v1/chat/completions",
     },
 }
-
 
 DEFAULT_MODEL_ID = "perplexity/sonar-pro"
 
@@ -87,24 +93,24 @@ def _get_model_cfg(model_name_or_id: Optional[str]) -> Dict[str, Any]:
     else:
         # Map short names to a default entry
         short = (model_name_or_id or "").strip().lower()
+
         if short in ["sonar-pro", "perplexity", "pplx"]:
             mid = "perplexity/sonar-pro"
+        
         elif short in ["gpt-4o", "openai"]:
             mid = "openai/gpt-4o"
-        elif short in ["gpt-4o-mini"]:
-            mid = "openai/gpt-4o-mini"
-        elif short in ["claude", "claude-3.5", "claude-3-5-sonnet"]:
-            mid = "anthropic/claude-3-5-sonnet"
-        elif short in ["gemini", "gemini-1.5-pro"]:
+        
+        elif short in ["claude", "sonnet", "claude-sonnet-4-5", "claude-4.5-sonnet"]:
+            mid = "anthropic/claude-sonnet-4-5"
+        
+        elif short in ["gemini", "gemini-flash", "gemini-2.5-flash"]:
             mid = "google/gemini-2.5-flash"
-        elif short in ["mistral", "mistral-large"]:
-            mid = "mistral/mistral-large"
-        elif short in ["llama", "llama-3.1-70b"]:
-            mid = "together/llama-3.1-70b"
-        elif short in ["command-r-plus", "cohere"]:
-            mid = "cohere/command-r-plus"
-        elif short in ["groq", "groq-llama-3.1-70b"]:
-            mid = "groq/llama-3.1-70b"
+        elif short in ["gemini-pro", "gemini-2.5-pro"]:
+            mid = "google/gemini-2.5-pro"
+        
+        elif short in ["mistral", "mistral-large", "mistral-large-latest"]:
+            mid = "mistral/mistral-large-latest"
+        
         else:
             mid = DEFAULT_MODEL_ID
 
