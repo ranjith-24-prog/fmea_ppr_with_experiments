@@ -59,7 +59,7 @@ LLM_REGISTRY: Dict[str, Dict[str, str]] = {
     "google/gemini-1.5-pro": {
         "label": "Google Gemini 1.5 Pro",
         "type": "google",
-        "model": "gemini-1.5-pro",
+        "model": "gemini-2.5-flash",
         "env": "GOOGLE_API_KEY",
         "base_url": "https://generativelanguage.googleapis.com/v1beta/models",
     },
