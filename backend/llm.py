@@ -184,13 +184,22 @@ def run_llm_chat(model_id: str, messages: List[Dict[str, str]], temperature: flo
     elif t == "google":
         api_key = cfg["api_key"]
         model = cfg["model"]
+    
+        # Gemini REST expects: /v1beta/models/{model}:generateContent
+        # Your /models endpoint returns names like "models/gemini-2.5-flash"
         if not model.startswith("models/"):
             model = f"models/{model}"
     
         url = f"{cfg['base_url'].rstrip('/')}/{model}:generateContent?key={api_key}"
         headers = {"Content-Type": "application/json"}
     
-        prompt = "\n".join([f"{m['role']}: {m['content']}" for m in messages])
+        # Build a clean prompt:
+        # - Put system instructions first
+        # - Then user content
+        sys_txt = "\n".join([m["content"] for m in messages if m.get("role") == "system"]).strip()
+        user_txt = "\n".join([m["content"] for m in messages if m.get("role") == "user"]).strip()
+    
+        prompt = (sys_txt + "\n\n" + user_txt).strip() if sys_txt else user_txt
     
         payload = {
             "contents": [
@@ -199,17 +208,32 @@ def run_llm_chat(model_id: str, messages: List[Dict[str, str]], temperature: flo
             "generationConfig": {
                 "temperature": temperature,
                 "topP": top_p,
-                "maxOutputTokens": max_tokens
+                "maxOutputTokens": max_tokens,
+                # Helps for your use case (strict JSON parsing downstream)
+                "responseMimeType": "application/json",
             }
         }
     
         raw = _post_json(url, headers, payload)
-        out_text = (
-            raw.get("candidates", [{}])[0]
-               .get("content", {})
-               .get("parts", [{}])[0]
-               .get("text", "")
-        )
+    
+        # Optional debug (uncomment once if needed)
+        # st.write("DEBUG Gemini raw:", raw)
+    
+        # Extract ALL text parts safely (Gemini may return multiple parts)
+        candidates = raw.get("candidates") or []
+        if not candidates:
+            out_text = ""
+        else:
+            content = (candidates[0].get("content") or {})
+            parts = content.get("parts") or []
+            out_text = "\n".join(
+                p.get("text", "") for p in parts
+                if isinstance(p, dict) and p.get("text")
+            ).strip()
+    
+        # Optional debug
+        # st.write("DEBUG Gemini out_text:", out_text[:800])
+
 
 
     elif t == "perplexity":
