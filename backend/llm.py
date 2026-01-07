@@ -50,7 +50,7 @@ LLM_REGISTRY: Dict[str, Dict[str, str]] = {
     "anthropic/claude-3-5-sonnet": {
         "label": "Anthropic Claude 3.5 Sonnet",
         "type": "anthropic",
-        "model": "claude-3-5-sonnet-20240620",
+        "model": "claude-sonnet-4-5",
         "env": "ANTHROPIC_API_KEY",
         "base_url": "https://api.anthropic.com/v1/messages",
     },
