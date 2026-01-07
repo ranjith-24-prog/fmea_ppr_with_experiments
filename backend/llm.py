@@ -56,12 +56,12 @@ LLM_REGISTRY: Dict[str, Dict[str, str]] = {
     },
 
     # 4) Google Gemini 1.5 Pro
-    "google/gemini-1.5-pro": {
-        "label": "Google Gemini 1.5 Pro",
-        "type": "google",
-        "model": "gemini-2.5-flash",
-        "env": "GOOGLE_API_KEY",
-        "base_url": "https://generativelanguage.googleapis.com/v1beta/models",
+    "google/gemini-2.5-flash": {
+    "label": "Google Gemini 2.5 Flash",
+    "type": "google",
+    "model": "gemini-2.5-flash",   # keep short; we will prefix models/ in code
+    "env": "GOOGLE_API_KEY",
+    "base_url": "https://generativelanguage.googleapis.com/v1beta",
     },
 
     # 5) Mistral Large
@@ -96,7 +96,7 @@ def _get_model_cfg(model_name_or_id: Optional[str]) -> Dict[str, Any]:
         elif short in ["claude", "claude-3.5", "claude-3-5-sonnet"]:
             mid = "anthropic/claude-3-5-sonnet"
         elif short in ["gemini", "gemini-1.5-pro"]:
-            mid = "google/gemini-1.5-pro"
+            mid = "google/gemini-2.5-flash"
         elif short in ["mistral", "mistral-large"]:
             mid = "mistral/mistral-large"
         elif short in ["llama", "llama-3.1-70b"]:
@@ -182,18 +182,35 @@ def run_llm_chat(model_id: str, messages: List[Dict[str, str]], temperature: flo
         out_text = "\n".join(parts)
 
     elif t == "google":
-        # Gemini: compose a single prompt string
         api_key = cfg["api_key"]
         model = cfg["model"]
-        url = f"{cfg['base_url']}/{model}:generateContent?key={api_key}"
+        if not model.startswith("models/"):
+            model = f"models/{model}"
+    
+        url = f"{cfg['base_url'].rstrip('/')}/{model}:generateContent?key={api_key}"
         headers = {"Content-Type": "application/json"}
+    
         prompt = "\n".join([f"{m['role']}: {m['content']}" for m in messages])
+    
         payload = {
-            "contents": [{"parts": [{"text": prompt}]}],
-            "generationConfig": {"temperature": temperature, "topP": top_p, "maxOutputTokens": max_tokens}
+            "contents": [
+                {"role": "user", "parts": [{"text": prompt}]}
+            ],
+            "generationConfig": {
+                "temperature": temperature,
+                "topP": top_p,
+                "maxOutputTokens": max_tokens
+            }
         }
+    
         raw = _post_json(url, headers, payload)
-        out_text = raw.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
+        out_text = (
+            raw.get("candidates", [{}])[0]
+               .get("content", {})
+               .get("parts", [{}])[0]
+               .get("text", "")
+        )
+
 
     elif t == "perplexity":
         # Perplexity OpenAI-compatible, but base URL may differ
