@@ -369,16 +369,30 @@ def render_fmea_assistant(embedder, helpers):
             add_clicked = st.button("Add new row", key="fa_add_row")
 
         if delete_clicked:
-            selected = st.session_state.get("fa_selected_rows") or []
-            selected_ids = {r.get("_row_id") for r in selected if r.get("_row_id")}
+            selected = st.session_state.get("fa_selected_rows", None)
+        
+            # Normalize selected -> list[dict]
+            if selected is None:
+                selected = []
+            elif isinstance(selected, pd.DataFrame):
+                selected = selected.to_dict(orient="records")
+            elif isinstance(selected, dict):
+                selected = [selected]
+            elif not isinstance(selected, list):
+                selected = []
+        
+            selected_ids = {r.get("_row_id") for r in selected if isinstance(r, dict) and r.get("_row_id")}
+        
             if selected_ids:
                 st.session_state["fa_grid_df"] = (
-                    st.session_state["fa_grid_df"][~st.session_state["fa_grid_df"]["_row_id"].isin(selected_ids)]
-                    .reset_index(drop=True)
+                    st.session_state["fa_grid_df"][
+                        ~st.session_state["fa_grid_df"]["_row_id"].isin(selected_ids)
+                    ].reset_index(drop=True)
                 )
                 st.rerun()
             else:
                 st.warning("No rows selected.")
+        
 
         if add_clicked:
             df_current = st.session_state["fa_grid_df"]
