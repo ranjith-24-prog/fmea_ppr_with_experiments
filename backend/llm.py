@@ -30,7 +30,7 @@ def _post_json(url: str, headers: Dict[str, str], payload: Dict[str, Any]) -> Di
 LLM_REGISTRY: Dict[str, Dict[str, str]] = {
     # Perplexity
     "perplexity/sonar-pro": {
-        "label": "Perplexity Sonar Pro (sonar-pro)",
+        "label": "Perplexity Sonar Pro",
         "type": "perplexity",
         "model": "sonar-pro",
         "env": "PERPLEXITY_API_KEY",
@@ -39,7 +39,7 @@ LLM_REGISTRY: Dict[str, Dict[str, str]] = {
 
     # OpenAI
     "openai/gpt-4o": {
-        "label": "OpenAI GPT‑4o (gpt-4o)",
+        "label": "OpenAI GPT‑4o",
         "type": "openai",
         "model": "gpt-4o",
         "env": "OPENAI_API_KEY",
@@ -48,7 +48,7 @@ LLM_REGISTRY: Dict[str, Dict[str, str]] = {
 
     # Anthropic (fix label + key)
     "anthropic/claude-sonnet-4-5": {
-        "label": "Anthropic Claude Sonnet 4.5 (claude-sonnet-4-5)",
+        "label": "Anthropic Claude Sonnet 4.5",
         "type": "anthropic",
         "model": "claude-sonnet-4-5",
         "env": "ANTHROPIC_API_KEY",
@@ -57,23 +57,16 @@ LLM_REGISTRY: Dict[str, Dict[str, str]] = {
 
     # Google Gemini (use the model codes Google documents)
     "google/gemini-2.5-flash": {
-        "label": "Google Gemini 2.5 Flash (gemini-2.5-flash)",
+        "label": "Google Gemini 2.5 Flash",
         "type": "google",
         "model": "gemini-2.5-flash",
-        "env": "GOOGLE_API_KEY",
-        "base_url": "https://generativelanguage.googleapis.com/v1beta",
-    },
-    "google/gemini-2.5-pro": {
-        "label": "Google Gemini 2.5 Pro (gemini-2.5-pro)",
-        "type": "google",
-        "model": "gemini-2.5-pro",
         "env": "GOOGLE_API_KEY",
         "base_url": "https://generativelanguage.googleapis.com/v1beta",
     },
 
     # Mistral
     "mistral/mistral-large-latest": {
-        "label": "Mistral Large (mistral-large-latest)",
+        "label": "Mistral Large",
         "type": "mistral",
         "model": "mistral-large-latest",
         "env": "MISTRAL_API_KEY",
