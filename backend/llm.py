@@ -55,15 +55,6 @@ LLM_REGISTRY: Dict[str, Dict[str, str]] = {
         "base_url": "https://api.anthropic.com/v1/messages",
     },
 
-    # Google Gemini (use the model codes Google documents)
-    "google/gemini-2.5-flash": {
-        "label": "Google Gemini 2.5 Flash",
-        "type": "google",
-        "model": "gemini-2.5-flash",
-        "env": "GOOGLE_API_KEY",
-        "base_url": "https://generativelanguage.googleapis.com/v1beta",
-    },
-
     # In LLM_REGISTRY:
     "google/gemini-2.0-flash": {
         "label": "Google Gemini 2.0 Flash",
