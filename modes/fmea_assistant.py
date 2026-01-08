@@ -7,6 +7,7 @@ import numpy as np
 from styles import AGGRID_CUSTOM_CSS
 from backend.llm import LLM, LLM_REGISTRY
 from backend.export import to_pretty_excel_bytes, to_structured_xml_bytes
+import uuid
 
 
 def render_fmea_assistant(embedder, helpers):
@@ -26,8 +27,6 @@ def render_fmea_assistant(embedder, helpers):
     _to_plain_list = helpers["_to_plain_list"]
     _get_secret = helpers["_get_secret"]
     ppr_editor_block = helpers["ppr_editor_block"]
-
-
 
     st.title("Case-based FMEA Assistant")
 
@@ -219,7 +218,6 @@ def render_fmea_assistant(embedder, helpers):
         if not user_text or len(user_text.strip()) < 5:
             st.warning("Please enter a brief description.")
         else:
-            #st.write("DEBUG: Generate FMEA block entered.")
             query_ppr = _derive_ppr_from_text(user_text)
 
             sb = _build_supabase()
@@ -228,37 +226,27 @@ def render_fmea_assistant(embedder, helpers):
                 kb_rows = _select_kb_rows(
                     sb, embedder, query_ppr, top_cases=8, top_rows=30
                 )
-                st.session_state["fa_fmea_kb_ms"] = int(
-                    (time.time() - t_kb0) * 1000
-                )
-            #st.write(f"DEBUG: KB rows retrieved = {len(kb_rows)}")
+                st.session_state["fa_fmea_kb_ms"] = int((time.time() - t_kb0) * 1000)
+
             with st.spinner("Filling gaps with LLM..."):
                 t_llm0 = time.time()
                 llm_rows = _complete_missing_with_llm(kb_rows, query_ppr, llm)
-                st.session_state["fa_fmea_llm_ms"] = int(
-                    (time.time() - t_llm0) * 1000
-                )
+                st.session_state["fa_fmea_llm_ms"] = int((time.time() - t_llm0) * 1000)
 
             merged = _normalize_numeric_and_rpn(kb_rows + llm_rows)
-            #st.write(f"DEBUG: merged rows = {len(merged)}, "
-            #         f"KB = {sum(1 for r in merged if r.get('_provenance')=='kb')}, "
-            #         f"LLM = {sum(1 for r in merged if r.get('_provenance')=='llm')}")
-            
 
             st.session_state["proposed_rows"] = merged
-            st.session_state["_provenance_vec"] = [
-                r.get("_provenance", "kb") for r in merged
-            ]
+            st.session_state["_provenance_vec"] = [r.get("_provenance", "kb") for r in merged]
 
             # Reset PPR
             st.session_state["assistant_ppr"] = _normalize_ppr_safe(
-                {
-                    "input_products": [],
-                    "products": [],
-                    "processes": [],
-                    "resources": [],
-                }
+                {"input_products": [], "products": [], "processes": [], "resources": []}
             )
+
+            # --- NEW: reset grid state for new generation (keeps existing features unchanged) ---
+            st.session_state.pop("fa_grid_df", None)
+            st.session_state.pop("fa_selected_rows", None)
+            # -------------------------------------------------------------------------------
 
             st.session_state["fa_fmea_ms"] = int((time.time() - t0) * 1000)
 
@@ -324,25 +312,16 @@ def render_fmea_assistant(embedder, helpers):
         with st.expander("PPR generation debug (LLM KB-style)", expanded=False):
             st.write("Description preview (first 280 chars):")
             st.code((user_txt or "")[:280], language="text")
-            st.write(
-                f"Sample rows used: {len(sample_rows)} (of {len(rows_sample) if rows_sample else 0})"
-            )
+            st.write(f"Sample rows used: {len(sample_rows)} (of {len(rows_sample) if rows_sample else 0})")
             st.write("Payload to LLM (truncated 1,500 chars):")
-            st.code(
-                payload[:1500] + ("..." if len(payload) > 1500 else ""),
-                language="json",
-            )
+            st.code(payload[:1500] + ("..." if len(payload) > 1500 else ""), language="json")
 
         try:
             # PPR-only call (no FMEA generation here)
-            ppr = llm.generate_ppr_from_text(
-                context_text=payload,
-                ppr_hint=None,
-            )
+            ppr = llm.generate_ppr_from_text(context_text=payload, ppr_hint=None)
         except Exception as e:
             st.error(f"PPR LLM call failed: {e}")
             return {}
-
 
         with st.expander("Raw LLM return (repr)", expanded=False):
             try:
@@ -354,9 +333,7 @@ def render_fmea_assistant(embedder, helpers):
         normalized = _normalize_ppr_safe(ppr)
 
         if not normalized.get("input_products") and input_hints:
-            normalized["input_products"] = sorted(
-                {h for h in input_hints if h and h.strip()}
-            )[:5]
+            normalized["input_products"] = sorted({h for h in input_hints if h and h.strip()})[:5]
 
         with st.expander("Normalized PPR (LLM KB-style)", expanded=False):
             st.json(normalized)
@@ -366,13 +343,55 @@ def render_fmea_assistant(embedder, helpers):
     # 4) Review grid (FMEA rows)
     if "proposed_rows" in st.session_state:
         st.subheader("Review FMEA rows")
-        df = pd.DataFrame(st.session_state["proposed_rows"])
-        if "_provenance_vec" in st.session_state and len(
-            st.session_state["_provenance_vec"]
-        ) == len(df):
-            df["_provenance"] = st.session_state["_provenance_vec"]
-        else:
-            df["_provenance"] = "llm"
+
+        # --- NEW: one authoritative grid df with stable row ids ---
+        if "fa_grid_df" not in st.session_state:
+            _df0 = pd.DataFrame(st.session_state["proposed_rows"])
+            if "_provenance_vec" in st.session_state and len(st.session_state["_provenance_vec"]) == len(_df0):
+                _df0["_provenance"] = st.session_state["_provenance_vec"]
+            else:
+                if "_provenance" not in _df0.columns:
+                    _df0["_provenance"] = "llm"
+
+            if "_row_id" not in _df0.columns:
+                _df0["_row_id"] = [str(uuid.uuid4()) for _ in range(len(_df0))]
+
+            st.session_state["fa_grid_df"] = _df0
+
+        df = st.session_state["fa_grid_df"].copy()
+        # ----------------------------------------------------------
+
+        # --- NEW: Add/Delete controls (minimal, does not affect other logic) ---
+        c_del, c_add = st.columns([1, 1])
+        with c_del:
+            delete_clicked = st.button("Delete selected rows", key="fa_delete_rows")
+        with c_add:
+            add_clicked = st.button("Add new row", key="fa_add_row")
+
+        if delete_clicked:
+            selected = st.session_state.get("fa_selected_rows") or []
+            selected_ids = {r.get("_row_id") for r in selected if r.get("_row_id")}
+            if selected_ids:
+                st.session_state["fa_grid_df"] = (
+                    st.session_state["fa_grid_df"][~st.session_state["fa_grid_df"]["_row_id"].isin(selected_ids)]
+                    .reset_index(drop=True)
+                )
+                st.rerun()
+            else:
+                st.warning("No rows selected.")
+
+        if add_clicked:
+            df_current = st.session_state["fa_grid_df"]
+            blank = {c: None for c in df_current.columns}
+            blank["_row_id"] = str(uuid.uuid4())
+            # keep provenance for styling; editable status handled below
+            blank["_provenance"] = blank.get("_provenance", "manual")
+            st.session_state["fa_grid_df"] = pd.concat(
+                [df_current, pd.DataFrame([blank])],
+                ignore_index=True,
+            )
+            st.rerun()
+        # ---------------------------------------------------------------------
 
         df_grid = df.copy().astype(object).where(pd.notna(df), None)
 
@@ -399,15 +418,22 @@ def render_fmea_assistant(embedder, helpers):
         empty_cols = [c for c, e in is_empty_col.items() if e]
 
         with st.expander("Columns with no values", expanded=False):
-            show_empty_cols = st.checkbox(
-                "Show empty columns", value=False, key="fa_show_empty_cols"
-            )
+            show_empty_cols = st.checkbox("Show empty columns", value=False, key="fa_show_empty_cols")
             st.write("Empty columns:", empty_cols)
 
         gb = GridOptionsBuilder.from_dataframe(df_grid)
         gb.configure_default_column(filterable=True, sortable=True, resizable=True)
+
+        # --- NEW: stable id column hidden/non-editable ---
+        if "_row_id" in df_grid.columns:
+            gb.configure_column("_row_id", header_name="Row ID", filter=False, editable=False, hide=True)
+
         gb.configure_column("_provenance", header_name="Prov", filter=True, editable=False)
+
+        # Keep your existing per-column configuration, but do not override _row_id/_provenance
         for col in df_grid.columns:
+            if col in ["_row_id", "_provenance"]:
+                continue
             gb.configure_column(
                 col,
                 header_name=col.replace("_", " ").title(),
@@ -415,6 +441,15 @@ def render_fmea_assistant(embedder, helpers):
                 editable=True,
                 hide=(col in empty_cols and not show_empty_cols),
             )
+
+        # --- NEW: enable multi-row selection with checkboxes ---
+        gb.configure_selection(
+            selection_mode="multiple",
+            use_checkbox=True,
+            header_checkbox=True,
+            header_checkbox_filtered_only=True,
+        )
+
         grid_options = gb.build()
         grid_options["rowClassRules"] = {
             "kb-row": "function(params) { return params && params.data && params.data._provenance === 'kb'; }",
@@ -433,6 +468,10 @@ def render_fmea_assistant(embedder, helpers):
             theme="ag-theme-alpine",
             custom_css=AGGRID_CUSTOM_CSS,
         )
+
+        # --- NEW: persist selected rows for deletion ---
+        st.session_state["fa_selected_rows"] = grid_response.get("selected_rows", [])
+        # ------------------------------------------------
 
         st.markdown(
             """
@@ -454,18 +493,18 @@ def render_fmea_assistant(embedder, helpers):
 
         if all(c in edited_df.columns for c in ["s1", "o1", "d1"]):
             edited_df["rpn1"] = edited_df.apply(
-                lambda r: _sint(r.get("s1"))
-                * _sint(r.get("o1"))
-                * _sint(r.get("d1")),
+                lambda r: _sint(r.get("s1")) * _sint(r.get("o1")) * _sint(r.get("d1")),
                 axis=1,
             )
         if all(c in edited_df.columns for c in ["s2", "o2", "d2"]):
             edited_df["rpn2"] = edited_df.apply(
-                lambda r: _sint(r.get("s2"))
-                * _sint(r.get("o2"))
-                * _sint(r.get("d2")),
+                lambda r: _sint(r.get("s2")) * _sint(r.get("o2")) * _sint(r.get("d2")),
                 axis=1,
             )
+
+        # --- NEW: keep authoritative df in sync with grid edits ---
+        st.session_state["fa_grid_df"] = edited_df.copy()
+        # ---------------------------------------------------------
 
         st.session_state["edited_df"] = edited_df
 
@@ -492,12 +531,7 @@ def render_fmea_assistant(embedder, helpers):
         st.session_state["assistant_ppr"] = _normalize_ppr_safe(
             st.session_state.get(
                 "assistant_ppr",
-                {
-                    "input_products": [],
-                    "products": [],
-                    "processes": [],
-                    "resources": [],
-                },
+                {"input_products": [], "products": [], "processes": [], "resources": []},
             )
         )
 
@@ -506,13 +540,8 @@ def render_fmea_assistant(embedder, helpers):
 
             t0 = time.time()
             try:
-                if (
-                    "edited_df" in st.session_state
-                    and st.session_state["edited_df"] is not None
-                ):
-                    rows_for_ppr = pd.DataFrame(
-                        st.session_state["edited_df"]
-                    ).to_dict(orient="records")
+                if "edited_df" in st.session_state and st.session_state["edited_df"] is not None:
+                    rows_for_ppr = pd.DataFrame(st.session_state["edited_df"]).to_dict(orient="records")
                 else:
                     rows_for_ppr = st.session_state.get("proposed_rows", [])
             except Exception:
@@ -529,9 +558,7 @@ def render_fmea_assistant(embedder, helpers):
 
                 if any(ppr_new.values()):
                     st.session_state["assistant_ppr"] = _normalize_ppr_safe(ppr_new)
-                    st.session_state["fa_ppr_ms"] = int(
-                        (time.time() - t0) * 1000
-                    )
+                    st.session_state["fa_ppr_ms"] = int((time.time() - t0) * 1000)
                     st.rerun()
                 else:
                     st.error(
@@ -541,12 +568,7 @@ def render_fmea_assistant(embedder, helpers):
         ppr_cur = _normalize_ppr_safe(
             st.session_state.get(
                 "assistant_ppr",
-                {
-                    "input_products": [],
-                    "products": [],
-                    "processes": [],
-                    "resources": [],
-                },
+                {"input_products": [], "products": [], "processes": [], "resources": []},
             )
         )
         edited_ppr = ppr_editor_block("fa_ppr", ppr_cur)
@@ -660,9 +682,7 @@ def render_fmea_assistant(embedder, helpers):
             elif not case_desc or not case_desc.strip():
                 st.error("Please enter a case description before saving.")
             else:
-                if not _get_secret("SUPABASE_URL") or not _get_secret(
-                    "SUPABASE_ANON_KEY"
-                ):
+                if not _get_secret("SUPABASE_URL") or not _get_secret("SUPABASE_ANON_KEY"):
                     st.error("SUPABASE_URL or SUPABASE_ANON_KEY not set.")
                     st.stop()
                 try:
@@ -671,23 +691,14 @@ def render_fmea_assistant(embedder, helpers):
                     # 1) Create case
                     title = case_title.strip()
                     desc = case_desc.strip()
-                    case_resp = (
-                        sb.table("cases")
-                        .insert({"title": title, "description": desc})
-                        .execute()
-                    )
+                    case_resp = sb.table("cases").insert({"title": title, "description": desc}).execute()
                     case_id = case_resp.data[0]["id"]
                     st.session_state["last_saved_case_id"] = case_id
 
                     # 2) Insert FMEA rows
-                    if (
-                        "edited_df" not in st.session_state
-                        or st.session_state["edited_df"] is None
-                    ):
+                    if "edited_df" not in st.session_state or st.session_state["edited_df"] is None:
                         raise ValueError("No edited FMEA rows available to save.")
-                    fmea_rows_clean = _sanitize_rows_for_db_from_df(
-                        st.session_state["edited_df"]
-                    )
+                    fmea_rows_clean = _sanitize_rows_for_db_from_df(st.session_state["edited_df"])
                     for r in fmea_rows_clean:
                         r["case_id"] = case_id
                     if fmea_rows_clean:
@@ -699,12 +710,7 @@ def render_fmea_assistant(embedder, helpers):
                     ppr = _normalize_ppr_safe(
                         st.session_state.get(
                             "assistant_ppr",
-                            {
-                                "input_products": [],
-                                "products": [],
-                                "processes": [],
-                                "resources": [],
-                            },
+                            {"input_products": [], "products": [], "processes": [], "resources": []},
                         )
                     )
                     inputs_list = [x for x in ppr["input_products"] if x and x.strip()]
@@ -722,64 +728,30 @@ def render_fmea_assistant(embedder, helpers):
                         if not name:
                             return None
                         existing = (
-                            sb.table(table)
-                            .select("id")
-                            .eq("name", name)
-                            .limit(1)
-                            .execute()
-                            .data
+                            sb.table(table).select("id").eq("name", name).limit(1).execute().data
                         )
                         if existing:
                             return existing[0]["id"]
                         rec = sb.table(table).insert({"name": name}).execute().data
                         return rec[0]["id"] if rec and isinstance(rec, list) else None
 
-                    input_ids = (
-                        [
-                            _get_or_create_ppr_local(sb, "inputs", n)
-                            for n in inputs_list
-                        ]
-                        if inputs_list
-                        else []
-                    )
-                    prod_ids = [
-                        _get_or_create_ppr_local(sb, "products", n) for n in prods_list
-                    ]
-                    proc_ids = [
-                        _get_or_create_ppr_local(sb, "processes", n) for n in procs_list
-                    ]
-                    res_ids = [
-                        _get_or_create_ppr_local(sb, "resources", n) for n in ress_list
-                    ]
+                    input_ids = ([_get_or_create_ppr_local(sb, "inputs", n) for n in inputs_list] if inputs_list else [])
+                    prod_ids = [_get_or_create_ppr_local(sb, "products", n) for n in prods_list]
+                    proc_ids = [_get_or_create_ppr_local(sb, "processes", n) for n in procs_list]
+                    res_ids = [_get_or_create_ppr_local(sb, "resources", n) for n in ress_list]
 
                     def _link_case_ppr_local(sb, case_id, table, id_field, ids):
-                        rows = [
-                            {"case_id": case_id, id_field: pid}
-                            for pid in ids
-                            if pid
-                        ]
+                        rows = [{"case_id": case_id, id_field: pid} for pid in ids if pid]
                         if rows:
-                            sb.table(table).upsert(
-                                rows, on_conflict=f"case_id,{id_field}"
-                            ).execute()
+                            sb.table(table).upsert(rows, on_conflict=f"case_id,{id_field}").execute()
 
                     if input_ids:
-                        _link_case_ppr_local(
-                            sb, case_id, "case_inputs", "input_id", input_ids
-                        )
-                    _link_case_ppr_local(
-                        sb, case_id, "case_products", "product_id", prod_ids
-                    )
-                    _link_case_ppr_local(
-                        sb, case_id, "case_processes", "process_id", proc_ids
-                    )
-                    _link_case_ppr_local(
-                        sb, case_id, "case_resources", "resource_id", res_ids
-                    )
+                        _link_case_ppr_local(sb, case_id, "case_inputs", "input_id", input_ids)
+                    _link_case_ppr_local(sb, case_id, "case_products", "product_id", prod_ids)
+                    _link_case_ppr_local(sb, case_id, "case_processes", "process_id", proc_ids)
+                    _link_case_ppr_local(sb, case_id, "case_resources", "resource_id", res_ids)
 
-                    def _upsert_case_scoped_ppr(
-                        sb, table: str, case_id: int, names: list[str], name_col: str = "name"
-                    ):
+                    def _upsert_case_scoped_ppr(sb, table: str, case_id: int, names: list[str], name_col: str = "name"):
                         for nm in names:
                             if not nm:
                                 continue
@@ -796,14 +768,10 @@ def render_fmea_assistant(embedder, helpers):
                             if exists:
                                 continue
                             try:
-                                sb.table(table).insert(
-                                    {name_col: nm, "case_id": case_id}
-                                ).execute()
+                                sb.table(table).insert({name_col: nm, "case_id": case_id}).execute()
                             except Exception:
                                 try:
-                                    sb.table(table).update({"case_id": case_id}).eq(
-                                        name_col, nm
-                                    ).is_("case_id", "null").execute()
+                                    sb.table(table).update({"case_id": case_id}).eq(name_col, nm).is_("case_id", "null").execute()
                                 except Exception:
                                     pass
 
@@ -814,25 +782,25 @@ def render_fmea_assistant(embedder, helpers):
 
                     # 4) RAG index (kb_index)
                     inputs_txt = ", ".join(inputs_list)
-                    prod_txt   = ", ".join(prods_list)
-                    proc_txt   = ", ".join(procs_list)
-                    res_txt    = ", ".join(ress_list)
+                    prod_txt = ", ".join(prods_list)
+                    proc_txt = ", ".join(procs_list)
+                    res_txt = ", ".join(ress_list)
 
-                    inp_vec  = _to_plain_list(embedder.embed(inputs_txt)) if inputs_txt else None
-                    prod_vec = _to_plain_list(embedder.embed(prod_txt))   if prod_txt   else None
-                    proc_vec = _to_plain_list(embedder.embed(proc_txt))   if proc_txt   else None
-                    res_vec  = _to_plain_list(embedder.embed(res_txt))    if res_txt    else None
+                    inp_vec = _to_plain_list(embedder.embed(inputs_txt)) if inputs_txt else None
+                    prod_vec = _to_plain_list(embedder.embed(prod_txt)) if prod_txt else None
+                    proc_vec = _to_plain_list(embedder.embed(proc_txt)) if proc_txt else None
+                    res_vec = _to_plain_list(embedder.embed(res_txt)) if res_txt else None
 
                     rec_full = {
                         "case_id": case_id,
-                        "inputs_text":   inputs_txt or None,
-                        "products_text": prod_txt  or None,
+                        "inputs_text": inputs_txt or None,
+                        "products_text": prod_txt or None,
                         "processes_text": proc_txt or None,
-                        "resources_text": res_txt  or None,
-                        "inp_vec":  inp_vec,
+                        "resources_text": res_txt or None,
+                        "inp_vec": inp_vec,
                         "prod_vec": prod_vec,
                         "proc_vec": proc_vec,
-                        "res_vec":  res_vec,
+                        "res_vec": res_vec,
                     }
 
                     import numpy as np
@@ -845,7 +813,6 @@ def render_fmea_assistant(embedder, helpers):
                             if not np.isfinite(arr).all():
                                 print(">>> NON-FINITE in", k, "for case", case_id)
                                 print("raw vector:", v[:10], "...")
-                                # Clean aggressively before continuing
                                 arr[~np.isfinite(arr)] = 0.0
                                 rec_full[k] = [float(x) for x in arr]
 
@@ -859,17 +826,12 @@ def render_fmea_assistant(embedder, helpers):
                         print("rec_full snippet:", {k: rec_full[k] for k in rec_full if k.endswith("_text")})
                         raise
 
-
-                    st.success(
-                        f"Created test case #{case_id} with FMEA rows, PPR links, and kb_index."
-                    )
+                    st.success(f"Created test case #{case_id} with FMEA rows, PPR links, and kb_index.")
 
                 except Exception as e:
                     st.error(f"Save failed: {e}")
                 else:
-                    st.session_state["fa_save_success_msg"] = (
-                        f"Saved test case #{case_id}."
-                    )
+                    st.session_state["fa_save_success_msg"] = f"Saved test case #{case_id}."
                     st.rerun()
 
         msg = st.session_state.pop("fa_save_success_msg", None)
@@ -893,9 +855,7 @@ def render_fmea_assistant(embedder, helpers):
         timing_fmea_kb_ms = st.session_state.get("fa_fmea_kb_ms")
         timing_fmea_llm_ms = st.session_state.get("fa_fmea_llm_ms")
 
-        ppr_for_export = _normalize_ppr_safe(
-            st.session_state.get("assistant_ppr") or {}
-        )
+        ppr_for_export = _normalize_ppr_safe(st.session_state.get("assistant_ppr") or {})
         edited = st.session_state.get("edited_df")
         if isinstance(edited, pd.DataFrame):
             fmea_df = edited.copy()
