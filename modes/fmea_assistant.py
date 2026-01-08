@@ -456,7 +456,9 @@ def render_fmea_assistant(embedder, helpers):
             "llm-row": "function(params) { return params && params.data && params.data._provenance === 'llm'; }",
         }
         grid_options["domLayout"] = "normal"
-
+        
+        st.caption("DEBUG: FMEA Assistant grid patch loaded ✅")
+        
         grid_response = AgGrid(
             df_grid,
             gridOptions=grid_options,
