@@ -64,6 +64,15 @@ LLM_REGISTRY: Dict[str, Dict[str, str]] = {
         "base_url": "https://generativelanguage.googleapis.com/v1beta",
     },
 
+    # In LLM_REGISTRY:
+    "google/gemini-2.0-flash": {
+        "label": "Google Gemini 2.0 Flash",
+        "type": "google",
+        "model": "gemini-2.0-flash",
+        "env": "GOOGLE_API_KEY",
+        "base_url": "https://generativelanguage.googleapis.com/v1beta",
+    },
+
     # Mistral
     "mistral/mistral-large-latest": {
         "label": "Mistral Large",
