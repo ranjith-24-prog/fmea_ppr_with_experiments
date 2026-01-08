@@ -243,10 +243,10 @@ def render_fmea_assistant(embedder, helpers):
                 {"input_products": [], "products": [], "processes": [], "resources": []}
             )
 
-            # --- NEW: reset grid state for new generation (keeps existing features unchanged) ---
+            # --- reset grid state for new generation ---
             st.session_state.pop("fa_grid_df", None)
             st.session_state.pop("fa_selected_rows", None)
-            # -------------------------------------------------------------------------------
+            # ------------------------------------------
 
             st.session_state["fa_fmea_ms"] = int((time.time() - t0) * 1000)
 
@@ -317,7 +317,6 @@ def render_fmea_assistant(embedder, helpers):
             st.code(payload[:1500] + ("..." if len(payload) > 1500 else ""), language="json")
 
         try:
-            # PPR-only call (no FMEA generation here)
             ppr = llm.generate_ppr_from_text(context_text=payload, ppr_hint=None)
         except Exception as e:
             st.error(f"PPR LLM call failed: {e}")
@@ -325,7 +324,8 @@ def render_fmea_assistant(embedder, helpers):
 
         with st.expander("Raw LLM return (repr)", expanded=False):
             try:
-                st.code(repr((_rows, ppr))[:4000], language="text")
+                # keep your structure; avoid NameError on _rows
+                st.code(repr(ppr)[:4000], language="text")
             except Exception:
                 st.write(ppr)
 
@@ -344,7 +344,6 @@ def render_fmea_assistant(embedder, helpers):
     if "proposed_rows" in st.session_state:
         st.subheader("Review FMEA rows")
 
-        # --- NEW: one authoritative grid df with stable row ids ---
         if "fa_grid_df" not in st.session_state:
             _df0 = pd.DataFrame(st.session_state["proposed_rows"])
             if "_provenance_vec" in st.session_state and len(st.session_state["_provenance_vec"]) == len(_df0):
@@ -359,9 +358,7 @@ def render_fmea_assistant(embedder, helpers):
             st.session_state["fa_grid_df"] = _df0
 
         df = st.session_state["fa_grid_df"].copy()
-        # ----------------------------------------------------------
 
-        # --- NEW: Add/Delete controls (minimal, does not affect other logic) ---
         c_del, c_add = st.columns([1, 1])
         with c_del:
             delete_clicked = st.button("Delete selected rows", key="fa_delete_rows")
@@ -370,8 +367,7 @@ def render_fmea_assistant(embedder, helpers):
 
         if delete_clicked:
             selected = st.session_state.get("fa_selected_rows", None)
-        
-            # Normalize selected -> list[dict]
+
             if selected is None:
                 selected = []
             elif isinstance(selected, pd.DataFrame):
@@ -380,9 +376,9 @@ def render_fmea_assistant(embedder, helpers):
                 selected = [selected]
             elif not isinstance(selected, list):
                 selected = []
-        
+
             selected_ids = {r.get("_row_id") for r in selected if isinstance(r, dict) and r.get("_row_id")}
-        
+
             if selected_ids:
                 st.session_state["fa_grid_df"] = (
                     st.session_state["fa_grid_df"][
@@ -392,20 +388,21 @@ def render_fmea_assistant(embedder, helpers):
                 st.rerun()
             else:
                 st.warning("No rows selected.")
-        
 
         if add_clicked:
+            # IMPORTANT: do NOT rerun here; just extend the df and let the same run render it.
             df_current = st.session_state["fa_grid_df"]
             blank = {c: None for c in df_current.columns}
             blank["_row_id"] = str(uuid.uuid4())
-            # keep provenance for styling; editable status handled below
-            blank["_provenance"] = blank.get("_provenance", "manual")
+            blank["_provenance"] = "manual"  # default for manually added rows
+
             st.session_state["fa_grid_df"] = pd.concat(
                 [df_current, pd.DataFrame([blank])],
                 ignore_index=True,
             )
-            st.rerun()
-        # ---------------------------------------------------------------------
+
+            # Update df used for rendering in this run (prevents odd UI state)
+            df = st.session_state["fa_grid_df"].copy()
 
         df_grid = df.copy().astype(object).where(pd.notna(df), None)
 
@@ -438,13 +435,11 @@ def render_fmea_assistant(embedder, helpers):
         gb = GridOptionsBuilder.from_dataframe(df_grid)
         gb.configure_default_column(filterable=True, sortable=True, resizable=True)
 
-        # --- NEW: stable id column hidden/non-editable ---
         if "_row_id" in df_grid.columns:
             gb.configure_column("_row_id", header_name="Row ID", filter=False, editable=False, hide=True)
 
         gb.configure_column("_provenance", header_name="Prov", filter=True, editable=False)
 
-        # Keep your existing per-column configuration, but do not override _row_id/_provenance
         for col in df_grid.columns:
             if col in ["_row_id", "_provenance"]:
                 continue
@@ -456,7 +451,6 @@ def render_fmea_assistant(embedder, helpers):
                 hide=(col in empty_cols and not show_empty_cols),
             )
 
-        # --- NEW: enable multi-row selection with checkboxes ---
         gb.configure_selection(
             selection_mode="multiple",
             use_checkbox=True,
@@ -470,13 +464,11 @@ def render_fmea_assistant(embedder, helpers):
             "llm-row": "function(params) { return params && params.data && params.data._provenance === 'llm'; }",
         }
         grid_options["domLayout"] = "normal"
-        
-        st.caption("DEBUG: FMEA Assistant grid patch loaded ✅")
-        
+
         grid_response = AgGrid(
             df_grid,
             gridOptions=grid_options,
-            update_mode=GridUpdateMode.MODEL_CHANGED,
+            update_mode=GridUpdateMode.VALUE_CHANGED,  # smoother for editing than MODEL_CHANGED
             allow_unsafe_jscode=True,
             enable_enterprise_modules=False,
             fit_columns_on_grid_load=True,
@@ -485,9 +477,7 @@ def render_fmea_assistant(embedder, helpers):
             custom_css=AGGRID_CUSTOM_CSS,
         )
 
-        # --- NEW: persist selected rows for deletion ---
-        st.session_state["fa_selected_rows"] = grid_response.get("selected_rows", [])
-        # ------------------------------------------------
+        st.session_state["fa_selected_rows"] = list(grid_response.get("selected_rows", []) or [])
 
         st.markdown(
             """
@@ -518,10 +508,8 @@ def render_fmea_assistant(embedder, helpers):
                 axis=1,
             )
 
-        # --- NEW: keep authoritative df in sync with grid edits ---
+        # Keep your existing sync approach (so Save/Export always see the latest)
         st.session_state["fa_grid_df"] = edited_df.copy()
-        # ---------------------------------------------------------
-
         st.session_state["edited_df"] = edited_df
 
     # 4b) PPR editor + Generate PPR
@@ -692,6 +680,28 @@ def render_fmea_assistant(embedder, helpers):
                     df[col] = None
             return df[allowed].to_dict(orient="records")
 
+        def _validate_rows_before_save(df_in: pd.DataFrame) -> list[str]:
+            if df_in is None or not isinstance(df_in, pd.DataFrame) or df_in.empty:
+                return ["No FMEA rows available."]
+            optional = {"_row_id", "_provenance"}  # case_id is not in grid; it is set on insert
+            required_cols = [c for c in df_in.columns if c not in optional]
+
+            errors = []
+            for i, row in df_in.iterrows():
+                missing = []
+                for c in required_cols:
+                    v = row.get(c)
+                    if v is None:
+                        missing.append(c)
+                    else:
+                        s = str(v).strip()
+                        if s == "" or s.lower() == "nan":
+                            missing.append(c)
+                if missing:
+                    rid = row.get("_row_id", i)
+                    errors.append(f"Row {i+1} (id={rid}): missing {', '.join(missing)}")
+            return errors
+
         if st.button("Save test case", key="fa_save_test_case"):
             if not case_title or not case_title.strip():
                 st.error("Please enter a case title before saving.")
@@ -701,6 +711,15 @@ def render_fmea_assistant(embedder, helpers):
                 if not _get_secret("SUPABASE_URL") or not _get_secret("SUPABASE_ANON_KEY"):
                     st.error("SUPABASE_URL or SUPABASE_ANON_KEY not set.")
                     st.stop()
+
+                # NEW: mandatory fields validation (prov optional; others required)
+                if "edited_df" in st.session_state and isinstance(st.session_state["edited_df"], pd.DataFrame):
+                    _errs = _validate_rows_before_save(st.session_state["edited_df"])
+                    if _errs:
+                        st.error("Please complete all mandatory fields in the FMEA table before saving.")
+                        st.write(_errs[:30])
+                        st.stop()
+
                 try:
                     sb = _build_supabase()
 
