@@ -367,10 +367,10 @@ def render_fmea_assistant(embedder, helpers):
         with c_add:
             add_clicked = st.button("Add new row", key="fa_add_row")
     
+        # Delete (keeps your logic)
         if delete_clicked:
             selected = st.session_state.get("fa_selected_rows", None)
     
-            # Normalize selected -> list[dict]
             if selected is None:
                 selected = []
             elif isinstance(selected, pd.DataFrame):
@@ -392,22 +392,23 @@ def render_fmea_assistant(embedder, helpers):
             else:
                 st.warning("No rows selected.")
     
+        # Add (NO rerun -> avoids “losing cell edits” feeling)
         if add_clicked:
-            # IMPORTANT: no st.rerun() here (prevents losing edit-focus / flicker)
             df_current = st.session_state["fa_grid_df"]
     
             blank = {c: None for c in df_current.columns}
             blank["_row_id"] = str(uuid.uuid4())
-            blank["_provenance"] = "manual"  # default for manually added rows
+            blank["_provenance"] = "manual"  # default provenance for manual rows
     
             st.session_state["fa_grid_df"] = pd.concat(
                 [df_current, pd.DataFrame([blank])],
                 ignore_index=True,
             )
     
-            # Refresh local df for this same run (so new row renders immediately)
+            # refresh df for this run so the row appears immediately
             df = st.session_state["fa_grid_df"].copy()
     
+        # Prepare df for grid
         df_grid = df.copy().astype(object).where(pd.notna(df), None)
     
         def _json_safe(v):
@@ -469,10 +470,14 @@ def render_fmea_assistant(embedder, helpers):
         }
         grid_options["domLayout"] = "normal"
     
+        # KEY CHANGE: MANUAL editing updates (smooth tabbing) + selection updates for delete
         grid_response = AgGrid(
             df_grid,
             gridOptions=grid_options,
-            update_mode=GridUpdateMode.VALUE_CHANGED,  # less “reloady” than MODEL_CHANGED
+            update_mode=GridUpdateMode.MANUAL | GridUpdateMode.SELECTION_CHANGED,
+            data_return_mode="as_input",
+            reload_data=False,
+            key="fa_fmea_grid",
             allow_unsafe_jscode=True,
             enable_enterprise_modules=False,
             fit_columns_on_grid_load=True,
@@ -481,7 +486,17 @@ def render_fmea_assistant(embedder, helpers):
             custom_css=AGGRID_CUSTOM_CSS,
         )
     
-        st.session_state["fa_selected_rows"] = list(grid_response.get("selected_rows", []) or [])
+        # FIX: never do "pandas_obj or []" (causes ambiguous truth error)
+        _sel = grid_response.get("selected_rows", None)
+        if _sel is None:
+            _sel = []
+        elif isinstance(_sel, pd.DataFrame):
+            _sel = _sel.to_dict(orient="records")
+        elif isinstance(_sel, dict):
+            _sel = [_sel]
+        elif not isinstance(_sel, list):
+            _sel = []
+        st.session_state["fa_selected_rows"] = _sel
     
         st.markdown(
             """
@@ -495,7 +510,7 @@ def render_fmea_assistant(embedder, helpers):
     
         edited_df = pd.DataFrame(grid_response["data"])
     
-        # FIX: robust int parsing (handles 7, 7.0, "7.0", "", None)
+        # Robust int parsing (handles 7, 7.0, "7.0", "", None)
         def _sint(v):
             try:
                 if v is None:
@@ -518,7 +533,7 @@ def render_fmea_assistant(embedder, helpers):
                 axis=1,
             )
     
-        # Keep authoritative df in sync with grid edits
+        # Persist latest grid data (only updates when user clicks the MANUAL save button)
         st.session_state["fa_grid_df"] = edited_df.copy()
         st.session_state["edited_df"] = edited_df
 
