@@ -1,4 +1,5 @@
 import time
+import uuid
 import json
 import pandas as pd
 import streamlit as st
@@ -70,6 +71,9 @@ def render_knowledge_base(embedder, helpers):
                 st.error(f"No FMEA data extracted from {upl.name}.")
             else:
                 st.session_state["parsed_fmea"] = fmea_rows
+                # Reset KB grid state when a new file is loaded
+                st.session_state.pop("kb_grid_df", None)
+                st.session_state.pop("kb_selected_rows", None)
                 st.session_state["uploaded_file"] = upl.name
                 st.session_state["uploaded_bytes"] = data
                 st.session_state["uploaded_mime"] = mime
@@ -80,20 +84,101 @@ def render_knowledge_base(embedder, helpers):
     # FMEA grid
     if st.session_state.get("parsed_fmea"):
         st.subheader(f"Review parsed FMEA - {st.session_state.get('uploaded_file', '')}")
-        df_preview = pd.DataFrame(st.session_state["parsed_fmea"])
-        df_grid = df_preview.copy()
-
+    
+        # --- one authoritative KB grid df with stable row ids ---
+        if "kb_grid_df" not in st.session_state:
+            _df0 = pd.DataFrame(st.session_state["parsed_fmea"])
+            if "_row_id" not in _df0.columns:
+                _df0["_row_id"] = [str(uuid.uuid4()) for _ in range(len(_df0))]
+            st.session_state["kb_grid_df"] = _df0
+    
+        df = st.session_state["kb_grid_df"].copy()
+    
+        # --- Add/Delete controls ---
+        c_del, c_add = st.columns([1, 1])
+        with c_del:
+            delete_clicked = st.button("Delete selected rows", key="kb_delete_rows")
+        with c_add:
+            add_clicked = st.button("Add new row", key="kb_add_row")
+    
+        if delete_clicked:
+            selected = st.session_state.get("kb_selected_rows", None)
+    
+            # Normalize selected -> list[dict]
+            if selected is None:
+                selected = []
+            elif isinstance(selected, pd.DataFrame):
+                selected = selected.to_dict(orient="records")
+            elif isinstance(selected, dict):
+                selected = [selected]
+            elif not isinstance(selected, list):
+                selected = []
+    
+            selected_ids = {r.get("_row_id") for r in selected if isinstance(r, dict) and r.get("_row_id")}
+    
+            if selected_ids:
+                st.session_state["kb_grid_df"] = (
+                    st.session_state["kb_grid_df"][
+                        ~st.session_state["kb_grid_df"]["_row_id"].isin(selected_ids)
+                    ].reset_index(drop=True)
+                )
+                st.rerun()
+            else:
+                st.warning("No rows selected.")
+    
+        if add_clicked:
+            df_current = st.session_state["kb_grid_df"]
+    
+            blank = {c: None for c in df_current.columns}
+            blank["_row_id"] = str(uuid.uuid4())
+    
+            st.session_state["kb_grid_df"] = pd.concat(
+                [df_current, pd.DataFrame([blank])],
+                ignore_index=True,
+            )
+    
+            # refresh for this run so the row appears immediately
+            df = st.session_state["kb_grid_df"].copy()
+    
+        # Prepare df for grid
+        df_grid = df.copy().astype(object).where(pd.notna(df), None)
+    
+        def _json_safe(v):
+            if v is None or isinstance(v, (int, float, str, bool)):
+                return v
+            try:
+                return str(v)
+            except Exception:
+                return None
+    
+        for c in df_grid.columns:
+            df_grid[c] = df_grid[c].map(_json_safe)
+    
         is_empty_col = df_grid.apply(
-            lambda col: not col.astype(str).str.strip().replace({"None": "", "nan": ""}).ne("").any(), axis=0
+            lambda col: not pd.Series(col)
+            .astype(str)
+            .str.strip()
+            .replace({"None": "", "nan": ""})
+            .ne("")
+            .any(),
+            axis=0,
         )
         empty_cols = [c for c, e in is_empty_col.items() if e]
+    
         with st.expander("Columns with no values", expanded=False):
             show_empty_cols = st.checkbox("Show empty columns", value=False, key="kb_show_empty_cols")
             st.write("Empty columns:", empty_cols)
-
+    
         gb = GridOptionsBuilder.from_dataframe(df_grid)
-        gb.configure_default_column(filterable=True, sortable=True, resizable=True, editable=True)
+        gb.configure_default_column(filterable=True, sortable=True, resizable=True)
+    
+        # stable id hidden / not editable
+        if "_row_id" in df_grid.columns:
+            gb.configure_column("_row_id", header_name="Row ID", filter=False, editable=False, hide=True)
+    
         for col_name in df_grid.columns:
+            if col_name == "_row_id":
+                continue
             gb.configure_column(
                 col_name,
                 header_name=col_name.replace("_", " ").title(),
@@ -101,21 +186,51 @@ def render_knowledge_base(embedder, helpers):
                 editable=True,
                 hide=(col_name in empty_cols and not show_empty_cols),
             )
+    
+        # multi-select with checkboxes
+        gb.configure_selection(
+            selection_mode="multiple",
+            use_checkbox=True,
+            header_checkbox=True,
+            header_checkbox_filtered_only=True,
+        )
+    
         grid_options = gb.build()
-
+    
+        # MANUAL editing (smooth tabbing) + selection updates
         grid_response = AgGrid(
             df_grid,
             gridOptions=grid_options,
-            update_mode=GridUpdateMode.MODEL_CHANGED,
+            update_mode=GridUpdateMode.MANUAL | GridUpdateMode.SELECTION_CHANGED,
+            data_return_mode="as_input",
+            reload_data=False,
+            key="kb_fmea_grid",
             allow_unsafe_jscode=True,
             enable_enterprise_modules=False,
             fit_columns_on_grid_load=True,
             height=400,
-            theme="ag-theme-alpine",  # <--- add this for consistent styling
+            theme="ag-theme-alpine",
             custom_css=AGGRID_CUSTOM_CSS,
         )
-        edited_fmea_df = grid_response["data"]
-        st.session_state["parsed_fmea"] = edited_fmea_df.to_dict(orient="records")
+    
+        # Persist selections safely (avoid "pandas_obj or []")
+        _sel = grid_response.get("selected_rows", None)
+        if _sel is None:
+            _sel = []
+        elif isinstance(_sel, pd.DataFrame):
+            _sel = _sel.to_dict(orient="records")
+        elif isinstance(_sel, dict):
+            _sel = [_sel]
+        elif not isinstance(_sel, list):
+            _sel = []
+        st.session_state["kb_selected_rows"] = _sel
+    
+        edited_df = pd.DataFrame(grid_response["data"])
+    
+        # Persist back to session (keep _row_id internally; safe for DB since your sanitizer selects allowed cols)
+        st.session_state["kb_grid_df"] = edited_df.copy()
+        st.session_state["parsed_fmea"] = edited_df.to_dict(orient="records")
+
 
 
         # --- PPR editor (4-pillar) ---
