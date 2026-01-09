@@ -94,52 +94,6 @@ def render_knowledge_base(embedder, helpers):
     
         df = st.session_state["kb_grid_df"].copy()
     
-        # --- Add/Delete controls ---
-        c_del, c_add = st.columns([1, 1])
-        with c_del:
-            delete_clicked = st.button("Delete selected rows", key="kb_delete_rows")
-        with c_add:
-            add_clicked = st.button("Add new row", key="kb_add_row")
-    
-        if delete_clicked:
-            selected = st.session_state.get("kb_selected_rows", None)
-    
-            # Normalize selected -> list[dict]
-            if selected is None:
-                selected = []
-            elif isinstance(selected, pd.DataFrame):
-                selected = selected.to_dict(orient="records")
-            elif isinstance(selected, dict):
-                selected = [selected]
-            elif not isinstance(selected, list):
-                selected = []
-    
-            selected_ids = {r.get("_row_id") for r in selected if isinstance(r, dict) and r.get("_row_id")}
-    
-            if selected_ids:
-                st.session_state["kb_grid_df"] = (
-                    st.session_state["kb_grid_df"][
-                        ~st.session_state["kb_grid_df"]["_row_id"].isin(selected_ids)
-                    ].reset_index(drop=True)
-                )
-                st.rerun()
-            else:
-                st.warning("No rows selected.")
-    
-        if add_clicked:
-            df_current = st.session_state["kb_grid_df"]
-    
-            blank = {c: None for c in df_current.columns}
-            blank["_row_id"] = str(uuid.uuid4())
-    
-            st.session_state["kb_grid_df"] = pd.concat(
-                [df_current, pd.DataFrame([blank])],
-                ignore_index=True,
-            )
-    
-            # refresh for this run so the row appears immediately
-            df = st.session_state["kb_grid_df"].copy()
-    
         # Prepare df for grid
         df_grid = df.copy().astype(object).where(pd.notna(df), None)
     
@@ -154,6 +108,7 @@ def render_knowledge_base(embedder, helpers):
         for c in df_grid.columns:
             df_grid[c] = df_grid[c].map(_json_safe)
     
+        # Empty columns logic (same as before)
         is_empty_col = df_grid.apply(
             lambda col: not pd.Series(col)
             .astype(str)
@@ -172,22 +127,32 @@ def render_knowledge_base(embedder, helpers):
         gb = GridOptionsBuilder.from_dataframe(df_grid)
         gb.configure_default_column(filterable=True, sortable=True, resizable=True)
     
-        # stable id hidden / not editable
+        # Stable id hidden / non-editable
         if "_row_id" in df_grid.columns:
             gb.configure_column("_row_id", header_name="Row ID", filter=False, editable=False, hide=True)
     
+        # --- Numeric-only S/O/D and RPN columns ---
+        numeric_cols = ["s1", "o1", "d1", "rpn1", "s2", "o2", "d2", "rpn2"]
         for col_name in df_grid.columns:
             if col_name == "_row_id":
                 continue
-            gb.configure_column(
-                col_name,
+    
+            col_kwargs = dict(
                 header_name=col_name.replace("_", " ").title(),
                 filter=True,
                 editable=True,
                 hide=(col_name in empty_cols and not show_empty_cols),
             )
     
-        # multi-select with checkboxes
+            if col_name in numeric_cols:
+                col_kwargs.update(
+                    cellEditor="agNumberCellEditor",
+                    cellEditorParams={"precision": 0},
+                )
+    
+            gb.configure_column(col_name, **col_kwargs)
+    
+        # Enable multi-row selection with checkboxes
         gb.configure_selection(
             selection_mode="multiple",
             use_checkbox=True,
@@ -196,8 +161,9 @@ def render_knowledge_base(embedder, helpers):
         )
     
         grid_options = gb.build()
+        grid_options["domLayout"] = "normal"
     
-        # MANUAL editing (smooth tabbing) + selection updates
+        # Smooth editing (MANUAL) + selection updates
         grid_response = AgGrid(
             df_grid,
             gridOptions=grid_options,
@@ -213,7 +179,7 @@ def render_knowledge_base(embedder, helpers):
             custom_css=AGGRID_CUSTOM_CSS,
         )
     
-        # Persist selections safely (avoid "pandas_obj or []")
+        # Persist selections safely from THIS grid_response (no reliance on old session state)
         _sel = grid_response.get("selected_rows", None)
         if _sel is None:
             _sel = []
@@ -225,13 +191,39 @@ def render_knowledge_base(embedder, helpers):
             _sel = []
         st.session_state["kb_selected_rows"] = _sel
     
+        # Persist edited data (updates when user clicks the MANUAL save button)
         edited_df = pd.DataFrame(grid_response["data"])
-    
-        # Persist back to session (keep _row_id internally; safe for DB since your sanitizer selects allowed cols)
         st.session_state["kb_grid_df"] = edited_df.copy()
         st.session_state["parsed_fmea"] = edited_df.to_dict(orient="records")
-
-
+    
+        # --- Add/Delete controls (AFTER grid so selection is current) ---
+        c_del, c_add = st.columns([1, 1])
+        with c_del:
+            delete_clicked = st.button("Delete selected rows", key="kb_delete_rows")
+        with c_add:
+            add_clicked = st.button("Add new row", key="kb_add_row")
+    
+        if delete_clicked:
+            selected_ids = {r.get("_row_id") for r in st.session_state.get("kb_selected_rows", []) if r.get("_row_id")}
+            if selected_ids:
+                st.session_state["kb_grid_df"] = (
+                    st.session_state["kb_grid_df"][
+                        ~st.session_state["kb_grid_df"]["_row_id"].isin(selected_ids)
+                    ].reset_index(drop=True)
+                )
+                st.session_state["parsed_fmea"] = st.session_state["kb_grid_df"].to_dict(orient="records")
+                st.session_state["kb_selected_rows"] = []
+                st.rerun()
+            else:
+                st.warning("No rows selected.")
+    
+        if add_clicked:
+            df_current = st.session_state["kb_grid_df"]
+            blank = {c: None for c in df_current.columns}
+            blank["_row_id"] = str(uuid.uuid4())
+            st.session_state["kb_grid_df"] = pd.concat([df_current, pd.DataFrame([blank])], ignore_index=True)
+            st.session_state["parsed_fmea"] = st.session_state["kb_grid_df"].to_dict(orient="records")
+            st.rerun()
 
         # --- PPR editor (4-pillar) ---
         # --- PPR generation from user description ---
