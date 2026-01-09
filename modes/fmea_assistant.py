@@ -343,8 +343,8 @@ def render_fmea_assistant(embedder, helpers):
     # 4) Review grid (FMEA rows)
     if "proposed_rows" in st.session_state:
         st.subheader("Review FMEA rows")
-
-        # --- NEW: one authoritative grid df with stable row ids ---
+    
+        # --- one authoritative grid df with stable row ids ---
         if "fa_grid_df" not in st.session_state:
             _df0 = pd.DataFrame(st.session_state["proposed_rows"])
             if "_provenance_vec" in st.session_state and len(st.session_state["_provenance_vec"]) == len(_df0):
@@ -352,25 +352,24 @@ def render_fmea_assistant(embedder, helpers):
             else:
                 if "_provenance" not in _df0.columns:
                     _df0["_provenance"] = "llm"
-
+    
             if "_row_id" not in _df0.columns:
                 _df0["_row_id"] = [str(uuid.uuid4()) for _ in range(len(_df0))]
-
+    
             st.session_state["fa_grid_df"] = _df0
-
+    
         df = st.session_state["fa_grid_df"].copy()
-        # ----------------------------------------------------------
-
-        # --- NEW: Add/Delete controls (minimal, does not affect other logic) ---
+    
+        # --- Add/Delete controls ---
         c_del, c_add = st.columns([1, 1])
         with c_del:
             delete_clicked = st.button("Delete selected rows", key="fa_delete_rows")
         with c_add:
             add_clicked = st.button("Add new row", key="fa_add_row")
-
+    
         if delete_clicked:
             selected = st.session_state.get("fa_selected_rows", None)
-        
+    
             # Normalize selected -> list[dict]
             if selected is None:
                 selected = []
@@ -380,9 +379,9 @@ def render_fmea_assistant(embedder, helpers):
                 selected = [selected]
             elif not isinstance(selected, list):
                 selected = []
-        
+    
             selected_ids = {r.get("_row_id") for r in selected if isinstance(r, dict) and r.get("_row_id")}
-        
+    
             if selected_ids:
                 st.session_state["fa_grid_df"] = (
                     st.session_state["fa_grid_df"][
@@ -392,23 +391,25 @@ def render_fmea_assistant(embedder, helpers):
                 st.rerun()
             else:
                 st.warning("No rows selected.")
-        
-
+    
         if add_clicked:
+            # IMPORTANT: no st.rerun() here (prevents losing edit-focus / flicker)
             df_current = st.session_state["fa_grid_df"]
+    
             blank = {c: None for c in df_current.columns}
             blank["_row_id"] = str(uuid.uuid4())
-            # keep provenance for styling; editable status handled below
-            blank["_provenance"] = blank.get("_provenance", "manual")
+            blank["_provenance"] = "manual"  # default for manually added rows
+    
             st.session_state["fa_grid_df"] = pd.concat(
                 [df_current, pd.DataFrame([blank])],
                 ignore_index=True,
             )
-            st.rerun()
-        # ---------------------------------------------------------------------
-
+    
+            # Refresh local df for this same run (so new row renders immediately)
+            df = st.session_state["fa_grid_df"].copy()
+    
         df_grid = df.copy().astype(object).where(pd.notna(df), None)
-
+    
         def _json_safe(v):
             if v is None or isinstance(v, (int, float, str, bool)):
                 return v
@@ -416,10 +417,10 @@ def render_fmea_assistant(embedder, helpers):
                 return str(v)
             except Exception:
                 return None
-
+    
         for c in df_grid.columns:
             df_grid[c] = df_grid[c].map(_json_safe)
-
+    
         is_empty_col = df_grid.apply(
             lambda col: not pd.Series(col)
             .astype(str)
@@ -430,21 +431,19 @@ def render_fmea_assistant(embedder, helpers):
             axis=0,
         )
         empty_cols = [c for c, e in is_empty_col.items() if e]
-
+    
         with st.expander("Columns with no values", expanded=False):
             show_empty_cols = st.checkbox("Show empty columns", value=False, key="fa_show_empty_cols")
             st.write("Empty columns:", empty_cols)
-
+    
         gb = GridOptionsBuilder.from_dataframe(df_grid)
         gb.configure_default_column(filterable=True, sortable=True, resizable=True)
-
-        # --- NEW: stable id column hidden/non-editable ---
+    
         if "_row_id" in df_grid.columns:
             gb.configure_column("_row_id", header_name="Row ID", filter=False, editable=False, hide=True)
-
+    
         gb.configure_column("_provenance", header_name="Prov", filter=True, editable=False)
-
-        # Keep your existing per-column configuration, but do not override _row_id/_provenance
+    
         for col in df_grid.columns:
             if col in ["_row_id", "_provenance"]:
                 continue
@@ -455,28 +454,25 @@ def render_fmea_assistant(embedder, helpers):
                 editable=True,
                 hide=(col in empty_cols and not show_empty_cols),
             )
-
-        # --- NEW: enable multi-row selection with checkboxes ---
+    
         gb.configure_selection(
             selection_mode="multiple",
             use_checkbox=True,
             header_checkbox=True,
             header_checkbox_filtered_only=True,
         )
-
+    
         grid_options = gb.build()
         grid_options["rowClassRules"] = {
             "kb-row": "function(params) { return params && params.data && params.data._provenance === 'kb'; }",
             "llm-row": "function(params) { return params && params.data && params.data._provenance === 'llm'; }",
         }
         grid_options["domLayout"] = "normal"
-        
-        st.caption("DEBUG: FMEA Assistant grid patch loaded ✅")
-        
+    
         grid_response = AgGrid(
             df_grid,
             gridOptions=grid_options,
-            update_mode=GridUpdateMode.MODEL_CHANGED,
+            update_mode=GridUpdateMode.VALUE_CHANGED,  # less “reloady” than MODEL_CHANGED
             allow_unsafe_jscode=True,
             enable_enterprise_modules=False,
             fit_columns_on_grid_load=True,
@@ -484,11 +480,9 @@ def render_fmea_assistant(embedder, helpers):
             theme="ag-theme-alpine",
             custom_css=AGGRID_CUSTOM_CSS,
         )
-
-        # --- NEW: persist selected rows for deletion ---
-        st.session_state["fa_selected_rows"] = grid_response.get("selected_rows", [])
-        # ------------------------------------------------
-
+    
+        st.session_state["fa_selected_rows"] = list(grid_response.get("selected_rows", []) or [])
+    
         st.markdown(
             """
             <style>
@@ -498,15 +492,21 @@ def render_fmea_assistant(embedder, helpers):
             """,
             unsafe_allow_html=True,
         )
-
+    
         edited_df = pd.DataFrame(grid_response["data"])
-
+    
+        # FIX: robust int parsing (handles 7, 7.0, "7.0", "", None)
         def _sint(v):
             try:
-                return int(str(v).strip())
+                if v is None:
+                    return 0
+                sv = str(v).strip()
+                if sv == "" or sv.lower() == "nan":
+                    return 0
+                return int(float(sv))
             except Exception:
                 return 0
-
+    
         if all(c in edited_df.columns for c in ["s1", "o1", "d1"]):
             edited_df["rpn1"] = edited_df.apply(
                 lambda r: _sint(r.get("s1")) * _sint(r.get("o1")) * _sint(r.get("d1")),
@@ -517,12 +517,11 @@ def render_fmea_assistant(embedder, helpers):
                 lambda r: _sint(r.get("s2")) * _sint(r.get("o2")) * _sint(r.get("d2")),
                 axis=1,
             )
-
-        # --- NEW: keep authoritative df in sync with grid edits ---
+    
+        # Keep authoritative df in sync with grid edits
         st.session_state["fa_grid_df"] = edited_df.copy()
-        # ---------------------------------------------------------
-
         st.session_state["edited_df"] = edited_df
+
 
     # 4b) PPR editor + Generate PPR
     if "proposed_rows" in st.session_state:
