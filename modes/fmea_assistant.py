@@ -360,6 +360,12 @@ def render_fmea_assistant(embedder, helpers):
     
         df = st.session_state["fa_grid_df"].copy()
     
+        # --- NEW: keep second S/O/D set unused -> blank it so it doesn't show 0 / confuse users ---
+        for _c in ["s2", "o2", "d2", "rpn2"]:
+            if _c in df.columns:
+                df[_c] = None
+        # -------------------------------------------------------------------------------
+    
         # --- Add/Delete controls ---
         c_del, c_add = st.columns([1, 1])
         with c_del:
@@ -407,6 +413,11 @@ def render_fmea_assistant(embedder, helpers):
     
             # refresh df for this run so the row appears immediately
             df = st.session_state["fa_grid_df"].copy()
+    
+            # Keep second set unused for the refreshed df too
+            for _c in ["s2", "o2", "d2", "rpn2"]:
+                if _c in df.columns:
+                    df[_c] = None
     
         # Prepare df for grid
         df_grid = df.copy().astype(object).where(pd.notna(df), None)
@@ -470,7 +481,7 @@ def render_fmea_assistant(embedder, helpers):
         }
         grid_options["domLayout"] = "normal"
     
-        # KEY CHANGE: MANUAL editing updates (smooth tabbing) + selection updates for delete
+        # MANUAL editing updates (smooth tabbing) + selection updates for delete
         grid_response = AgGrid(
             df_grid,
             gridOptions=grid_options,
@@ -486,7 +497,7 @@ def render_fmea_assistant(embedder, helpers):
             custom_css=AGGRID_CUSTOM_CSS,
         )
     
-        # FIX: never do "pandas_obj or []" (causes ambiguous truth error)
+        # Persist selections safely (no "pandas_obj or []")
         _sel = grid_response.get("selected_rows", None)
         if _sel is None:
             _sel = []
@@ -522,20 +533,23 @@ def render_fmea_assistant(embedder, helpers):
             except Exception:
                 return 0
     
+        # Compute only RPN1
         if all(c in edited_df.columns for c in ["s1", "o1", "d1"]):
             edited_df["rpn1"] = edited_df.apply(
                 lambda r: _sint(r.get("s1")) * _sint(r.get("o1")) * _sint(r.get("d1")),
                 axis=1,
             )
-        if all(c in edited_df.columns for c in ["s2", "o2", "d2"]):
-            edited_df["rpn2"] = edited_df.apply(
-                lambda r: _sint(r.get("s2")) * _sint(r.get("o2")) * _sint(r.get("d2")),
-                axis=1,
-            )
     
-        # Persist latest grid data (only updates when user clicks the MANUAL save button)
+        # --- NEW: force rpn2 and its inputs to remain blank (no 0s) ---
+        for _c in ["s2", "o2", "d2", "rpn2"]:
+            if _c in edited_df.columns:
+                edited_df[_c] = None
+        # -------------------------------------------------------------
+    
+        # Persist latest grid data (updates when user clicks the MANUAL save button)
         st.session_state["fa_grid_df"] = edited_df.copy()
         st.session_state["edited_df"] = edited_df
+
 
 
     # 4b) PPR editor + Generate PPR
