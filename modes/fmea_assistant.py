@@ -28,7 +28,7 @@ def render_fmea_assistant(embedder, helpers):
     _get_secret = helpers["_get_secret"]
     ppr_editor_block = helpers["ppr_editor_block"]
 
-    st.title("Case-based FMEA Assistant")
+    st.title("FMEA Knowledge Reuse Assistant")
 
     # Timing slots
     st.session_state.setdefault("fa_fmea_kb_ms", None)    # KB retrieval only
