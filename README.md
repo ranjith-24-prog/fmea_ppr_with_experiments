@@ -73,7 +73,7 @@ LLM providers evaluated (as implemented in this project):
 - Optional PER (Process Element Requirements) aligned with a Product‑Process‑Resource (PPR) ontology.
 - A growing, semantically searchable case base that improves as validated cases are added.
 
-## Tech stack (AI Software Engineer oriented)
+## Tech stack
 - Python (ETL/parsing, retrieval + generation orchestration, evaluation scripts)
 - Streamlit (multi-page app; interactive tables for human-in-the-loop editing)
 - RAG + CBR patterns (retrieve similar cases → generate grounded drafts → store validated improvements)
