@@ -1,7 +1,4 @@
 # backend_fmea_pipeline.py
-# Purpose:
-# - Replace broken file_parser for Excel→FMEA by porting your working ipynb logic.
-# - No FastAPI. Import and call from app.py.
 # - Flow: read Excel → normalize like notebook → return df for UI → optional LLM enhance →
 #         finalize → save raw Excel to Supabase + save FMEA/PPR to DB.
 
@@ -12,9 +9,7 @@ import time
 from typing import Dict, Any, List, Optional, Tuple
 import os
 import pandas as pd
-
-# If your llm.py exposes a class LLM with methods used in the app, import it:
-from backend.llm import LLM  # matches your existing file
+from backend.llm import LLM  
 
 # -----------------------------
 # Schema constants
@@ -140,8 +135,6 @@ def _propagate_system_element_from_function(df_trim: pd.DataFrame) -> pd.DataFra
 
 def _forward_fill_all_columns(df_trim: pd.DataFrame) -> pd.DataFrame:
     return df_trim.ffill().reset_index(drop=True)
-
-# backend_fmea_pipeline.py  (ADD NEAR OTHER SMALL HELPERS)
 
 def _merge_ppr_dicts(base: dict, add: dict) -> dict:
     """Merge two PPR dicts including the new 'input_products' key without affecting FMEA rows."""
@@ -383,7 +376,7 @@ def generate_ppr_only(rows: list[dict]) -> dict:
     """
     input_products, products, processes, resources = set(), set(), set(), set()
 
-    # Keyword buckets (expand freely)
+    # Keyword buckets
     process_kw = (
         "weld", "bond", "cut", "drill", "assemble", "braze", "solder", "rivet",
         "deburr", "machine", "mill", "turn", "grind", "coat", "paint",
@@ -402,7 +395,7 @@ def generate_ppr_only(rows: list[dict]) -> dict:
         "fastener", "bolt", "screw", "nut", "insert", "sealant", "primer"
     )
 
-    # Columns to scan (same as your current function)
+    # Columns to scan
     cols = ["system_element", "function", "potential_failure", "potential_cause", "recommended_action", "notes"]
 
     def classify(val: str):
@@ -586,7 +579,7 @@ def apply_enhancement(rows: List[Dict[str, Any]]) -> Tuple[List[Dict[str, Any]],
 
 
 # -----------------------------
-# Finalize and save to Supabase (PPR persist extended with inputs – optional)
+# Finalize and save to Supabase (PPR persist extended with inputs)
 # -----------------------------
 def finalize_and_save(
     sb_client,
@@ -622,7 +615,6 @@ def finalize_and_save(
         if name:
             sb_client.table("resources").insert({"name": name, "case_id": case_id}).execute()
 
-    # NEW: persist input_products if your DB has an `inputs` table (optional)
     for name in (ppr.get("input_products") or []):
         if name:
             try:
