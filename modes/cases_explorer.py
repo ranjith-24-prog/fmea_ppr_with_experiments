@@ -1,7 +1,7 @@
 import pandas as pd
 import streamlit as st
 
-from styles import AGGRID_CUSTOM_CSS  # not used here yet, but fine if you later add AgGrid
+from styles import AGGRID_CUSTOM_CSS
 
 
 def render_cases_explorer(helpers):
