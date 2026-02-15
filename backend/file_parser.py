@@ -157,7 +157,7 @@ def parse_excel_fmea(excel_bytes):
         df = df.fillna("")
         df.columns = [str(c).strip() for c in df.columns]
 
-        # Map common headers to APIS keys (extend as needed)
+        # Map common headers to APIS keys
         header_map = {
             # left: header in file, right: APIS key
             "System element": "system_element",
@@ -199,7 +199,6 @@ def parse_excel_fmea(excel_bytes):
             "Notes": "notes",
         }
 
-        # Pass-through if some columns already use APIS names
         for k in APIS_COLUMNS:
             if k in df.columns:
                 header_map[k] = k
