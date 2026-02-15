@@ -1,4 +1,3 @@
-# app.py
 # Streamlit app integrating:
 # - Knowledge Base (KB) page: Upload XML/Excel → parse FMEA → auto-generate PPR → edit → save by manual case_id
 #   - Save persists FMEA rows, global PPR catalogs (deduped), case-to-PPR links, and kb_index vectors
@@ -13,8 +12,6 @@ from backend.export import to_pretty_excel_bytes, to_structured_xml_bytes
 from supabase import create_client, Client
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 from styles import apply_global_styles, AGGRID_CUSTOM_CSS
-
-# Backend utilities (project-specific; keep names as in your repo)
 #from backend.db import init_and_seed, get_conn
 from backend.llm import Embeddings, LLM, LLM_REGISTRY
 #from backend.repository import get_all_ontology, search_ontology_by_type
@@ -197,7 +194,7 @@ def ppr_to_cytoscape(ppr: dict):
 
 
 # -----------------------
-# Case-based KB retrieval utilities (unchanged functionality)
+# Case-based KB retrieval utilities
 # -----------------------
 def _concat_list(v):
     if not v: return ""
@@ -213,7 +210,6 @@ def _to_plain_list(v):
     try:
         import numpy as np
         arr = np.array(v, dtype=float).ravel()
-        # Replace non-finite with 0.0, then filter if you prefer
         arr[~np.isfinite(arr)] = 0.0
         clean = [float(x) for x in arr]
         return clean or None
