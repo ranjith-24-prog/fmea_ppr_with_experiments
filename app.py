@@ -290,7 +290,7 @@ def _score_row_against_query(row: dict, query_ppr: dict) -> float:
     inter = len(q_tokens & r_tokens)
     return inter/(1+len(q_tokens))
 
-def _select_kb_rows(sb: Client, embedder: Embeddings, query_ppr: dict, top_cases=8, top_rows=5) -> list[dict]:
+def _select_kb_rows(sb: Client, embedder: Embeddings, query_ppr: dict, top_cases=8, top_rows=30) -> list[dict]:
     cand_cases = _fetch_candidate_cases(sb, embedder, query_ppr, top_k=top_cases)
     case_ids = [c["case_id"] for c in cand_cases]
     rows = _fetch_rows_for_cases(sb, case_ids)
