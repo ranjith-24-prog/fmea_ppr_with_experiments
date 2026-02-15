@@ -224,7 +224,7 @@ def render_fmea_assistant(embedder, helpers):
             with st.spinner("Retrieving relevant KB rows..."):
                 t_kb0 = time.time()
                 kb_rows = _select_kb_rows(
-                    sb, embedder, query_ppr, top_cases=8, top_rows=30
+                    sb, embedder, query_ppr, top_cases=8, top_rows=5
                 )
                 st.session_state["fa_fmea_kb_ms"] = int((time.time() - t_kb0) * 1000)
 
