@@ -111,7 +111,7 @@ def render_knowledge_base(embedder, helpers):
             enable_enterprise_modules=False,
             fit_columns_on_grid_load=True,
             height=400,
-            theme="ag-theme-alpine",  # <--- add this for consistent styling
+            theme="ag-theme-alpine", 
             custom_css=AGGRID_CUSTOM_CSS,
         )
         edited_fmea_df = grid_response["data"]
@@ -223,9 +223,6 @@ def render_knowledge_base(embedder, helpers):
 
         current_ppr = _normalize_ppr_safe(st.session_state.get("parsed_ppr"))
         st.session_state["parsed_ppr"] = ppr_editor_block("kb_ppr", current_ppr)
-
-
-
 
         # Guard: require at least one list populated
         # Re-read the latest editor values just-in-time
