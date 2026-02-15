@@ -12,7 +12,7 @@ def to_pretty_excel_bytes(
     case_desc: str | None,
     model_label: str | None,
     timing_fmea_ms: int | None,
-    timing_fpr_ms_ppr: int | None,      # renamed param to avoid ambiguous naming collision
+    timing_fpr_ms_ppr: int | None,   
     timing_fmea_kb_ms: int | None,
     timing_fmea_llm_ms: int | None,
     ppr: Dict[str, List[str]],
