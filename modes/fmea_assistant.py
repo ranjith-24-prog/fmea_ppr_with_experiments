@@ -243,10 +243,8 @@ def render_fmea_assistant(embedder, helpers):
                 {"input_products": [], "products": [], "processes": [], "resources": []}
             )
 
-            # --- NEW: reset grid state for new generation (keeps existing features unchanged) ---
             st.session_state.pop("fa_grid_df", None)
             st.session_state.pop("fa_selected_rows", None)
-            # -------------------------------------------------------------------------------
 
             st.session_state["fa_fmea_ms"] = int((time.time() - t0) * 1000)
 
@@ -360,20 +358,16 @@ def render_fmea_assistant(embedder, helpers):
     
         df = st.session_state["fa_grid_df"].copy()
     
-        # --- NEW: keep second S/O/D set unused -> blank it so it doesn't show 0 / confuse users ---
         for _c in ["s2", "o2", "d2", "rpn2"]:
             if _c in df.columns:
                 df[_c] = None
-        # -------------------------------------------------------------------------------
-    
-        # --- Add/Delete controls ---
+
         c_del, c_add = st.columns([1, 1])
         with c_del:
             delete_clicked = st.button("Delete selected rows", key="fa_delete_rows")
         with c_add:
             add_clicked = st.button("Add new row", key="fa_add_row")
     
-        # Delete (keeps your logic)
         if delete_clicked:
             selected = st.session_state.get("fa_selected_rows", None)
     
@@ -398,7 +392,6 @@ def render_fmea_assistant(embedder, helpers):
             else:
                 st.warning("No rows selected.")
     
-        # Add (NO rerun -> avoids “losing cell edits” feeling)
         if add_clicked:
             df_current = st.session_state["fa_grid_df"]
     
@@ -540,7 +533,7 @@ def render_fmea_assistant(embedder, helpers):
                 axis=1,
             )
     
-        # --- NEW: force rpn2 and its inputs to remain blank (no 0s) ---
+        # --- force rpn2 and its inputs to remain blank (no 0s) ---
         for _c in ["s2", "o2", "d2", "rpn2"]:
             if _c in edited_df.columns:
                 edited_df[_c] = None
