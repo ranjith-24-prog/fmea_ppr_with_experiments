@@ -1,4 +1,3 @@
-# llm.py
 import os, time, json, requests, re
 from typing import Any, Dict, Tuple, Optional, List
 import streamlit as st
@@ -120,7 +119,7 @@ class LLMError(Exception):
     pass
 
 class LLLM:
-    pass  # Keep for compatibility if referenced elsewhere
+    pass  
 
 # ---------------------------
 # Unified chat adapter
@@ -184,17 +183,12 @@ def run_llm_chat(model_id: str, messages: List[Dict[str, str]], temperature: flo
         api_key = cfg["api_key"]
         model = cfg["model"]
     
-        # Gemini REST expects: /v1beta/models/{model}:generateContent
-        # Your /models endpoint returns names like "models/gemini-2.5-flash"
         if not model.startswith("models/"):
             model = f"models/{model}"
     
         url = f"{cfg['base_url'].rstrip('/')}/{model}:generateContent?key={api_key}"
         headers = {"Content-Type": "application/json"}
     
-        # Build a clean prompt:
-        # - Put system instructions first
-        # - Then user content
         sys_txt = "\n".join([m["content"] for m in messages if m.get("role") == "system"]).strip()
         user_txt = "\n".join([m["content"] for m in messages if m.get("role") == "user"]).strip()
     
@@ -208,17 +202,12 @@ def run_llm_chat(model_id: str, messages: List[Dict[str, str]], temperature: flo
                 "temperature": temperature,
                 "topP": top_p,
                 "maxOutputTokens": max_tokens,
-                # Helps for your use case (strict JSON parsing downstream)
                 "responseMimeType": "application/json",
             }
         }
     
         raw = _post_json(url, headers, payload)
     
-        # Optional debug (uncomment once if needed)
-        # st.write("DEBUG Gemini raw:", raw)
-    
-        # Extract ALL text parts safely (Gemini may return multiple parts)
         candidates = raw.get("candidates") or []
         if not candidates:
             out_text = ""
@@ -229,14 +218,8 @@ def run_llm_chat(model_id: str, messages: List[Dict[str, str]], temperature: flo
                 p.get("text", "") for p in parts
                 if isinstance(p, dict) and p.get("text")
             ).strip()
-    
-        # Optional debug
-        # st.write("DEBUG Gemini out_text:", out_text[:800])
-
-
 
     elif t == "perplexity":
-        # Perplexity OpenAI-compatible, but base URL may differ
         url = (cfg["base_url"].rstrip("/") + "/chat/completions")
         headers = {"Authorization": f"Bearer {cfg['api_key']}", "Content-Type": "application/json"}
         payload = {
@@ -412,8 +395,6 @@ class LLM:
                     try:
                         data = json.loads(candidate)
                     except Exception as e2:
-                        # Optional: debug the broken JSON fragment
-                        #st.write("DEBUG JSON candidate parse failed:", repr(candidate[:400]))
                         raise ValueError(f"LLM did not return valid JSON: {e2}")
                 else:
                     raise ValueError(
@@ -423,8 +404,6 @@ class LLM:
         fmea_json = data.get("fmea", [])
         ppr_json = data.get("ppr", {"products": [], "processes": [], "resources": []})
         return fmea_json, ppr_json
-
-
 
     def generate_ppr_from_text(
         self,
@@ -463,7 +442,6 @@ class LLM:
         if not content or not str(content).strip():
             raise ValueError("LLM did not return any content (empty response).")
 
-        # Robust JSON parsing (same pattern as generate_fmea_and_ppr_json)
         try:
             data = json.loads(content)
         except Exception:
