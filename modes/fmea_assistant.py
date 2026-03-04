@@ -442,7 +442,14 @@ def render_fmea_assistant(embedder, helpers):
             st.write("Empty columns:", empty_cols)
     
         gb = GridOptionsBuilder.from_dataframe(df_grid)
-        gb.configure_default_column(filterable=True, sortable=True, resizable=True)
+        #gb.configure_default_column(filterable=True, sortable=True, resizable=True)
+        gb.configure_default_column(
+            filterable=True, 
+            sortable=True, 
+            resizable=True,
+            wrapText=True,       # Forces text to wrap to the next line
+            autoHeight=True      # Adjusts row height to fit the wrapped text
+        )
     
         if "_row_id" in df_grid.columns:
             gb.configure_column("_row_id", header_name="Row ID", filter=False, editable=False, hide=True)
@@ -484,7 +491,7 @@ def render_fmea_assistant(embedder, helpers):
             key="fa_fmea_grid",
             allow_unsafe_jscode=True,
             enable_enterprise_modules=False,
-            fit_columns_on_grid_load=True,
+            fit_columns_on_grid_load=False, # Was True before
             height=420,
             theme="ag-theme-alpine",
             custom_css=AGGRID_CUSTOM_CSS,
